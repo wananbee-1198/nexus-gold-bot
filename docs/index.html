@@ -201,15 +201,18 @@ html,body{background:#050508;color:#e0e8ff;font-family:'Inter',sans-serif;min-he
 <script>
 const OWNER = 'wananbee-1198';
 const REPO  = 'nexus-gold-bot';
-const RAW   = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main`;
+const API   = `https://api.github.com/repos/${OWNER}/${REPO}/contents`;
 
 function fmt(n, d=2) {
   if (n == null) return '--';
   return parseFloat(n).toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 }
 
-async function fetchJSON(path) {
-  const r = await fetch(`${RAW}/${path}?t=${Date.now()}`);
+async function fetchGitHub(path) {
+  const r = await fetch(`${API}/${path}`, {
+    headers: { 'Accept': 'application/vnd.github.v3.raw', 'Cache-Control': 'no-cache' },
+    cache: 'no-store'
+  });
   if (!r.ok) throw new Error(r.status);
   return r.json();
 }
@@ -218,8 +221,8 @@ async function fetchAll() {
   document.getElementById('refresh-hint').innerHTML = '<span class="spinner"></span>กำลังโหลด...';
   try {
     const [state, tradesData] = await Promise.all([
-      fetchJSON('state.json'),
-      fetchJSON('trades.json'),
+      fetchGitHub('state.json'),
+      fetchGitHub('trades.json'),
     ]);
     renderState(state);
     renderTrades(tradesData.trades || []);
