@@ -201,7 +201,7 @@ html,body{background:#050508;color:#e0e8ff;font-family:'Inter',sans-serif;min-he
 <script>
 const OWNER = 'wananbee-1198';
 const REPO  = 'nexus-gold-bot';
-const API   = `https://api.github.com/repos/${OWNER}/${REPO}/contents`;
+const RAW   = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main`;
 
 function fmt(n, d=2) {
   if (n == null) return '--';
@@ -209,10 +209,9 @@ function fmt(n, d=2) {
 }
 
 async function fetchGitHub(path) {
-  const r = await fetch(`${API}/${path}`, {
-    headers: { 'Accept': 'application/vnd.github.v3.raw', 'Cache-Control': 'no-cache' },
-    cache: 'no-store'
-  });
+  // ใช้ raw URL + timestamp เพื่อหลีกเลี่ยง cache
+  const url = `${RAW}/${path}?nocache=${Date.now()}`;
+  const r = await fetch(url, { cache: 'no-store' });
   if (!r.ok) throw new Error(r.status);
   return r.json();
 }
