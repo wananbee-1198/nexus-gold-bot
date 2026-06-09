@@ -35,10 +35,10 @@ jobs:
           LINE_CHANNEL_SECRET: ${{ secrets.LINE_CHANNEL_SECRET }}
         run: python run_once.py
 
-      - name: Save state back to repo
+      - name: Save state & trades back to repo
         run: |
           git config user.name  "NEXUS Bot"
           git config user.email "bot@nexusgold.ai"
-          git add state.json || true
-          git diff --staged --quiet || git commit -m "state: update cycle $(date -u '+%H:%M UTC')"
+          git add state.json trades.json || true
+          git diff --staged --quiet || git commit -m "bot: cycle update $(date -u '+%Y-%m-%d %H:%M UTC')"
           git push || true
