@@ -124,6 +124,25 @@ def run():
     # ── 4. Daily summary ──────────────────────────────────────────────
     _check_daily_summary(state, today, now_th)
 
+    # บันทึกข้อมูลทั้งหมดลง state.json เพื่อ dashboard
+    state.update({
+        "price":        price,
+        "signal":       signal.action,
+        "confidence":   signal.confidence,
+        "reason":       signal.reason,
+        "rsi":          round(signal.rsi, 1),
+        "trend":        signal.trend,
+        "ema_fast":     round(signal.ema_fast, 2),
+        "ema_slow":     round(signal.ema_slow, 2),
+        "atr":          round(signal.atr, 4),
+        "sl":           round(price * (1 - STOP_LOSS_PCT / 100), 2),
+        "tp":           round(price * (1 + TAKE_PROFIT_PCT / 100), 2),
+        "balance_usdt": bal["usdt"],
+        "balance_xaut": bal["xaut"],
+        "open_position": state.get("position"),
+        "last_update":  now_str,
+    })
+
     save_state(state)
     log.info("Done.")
 

@@ -1,5 +1,20 @@
 {
   "position": null,
   "orders": [],
-  "cycle": 1
+  "cycle": 3,
+  "price": 4247.84,
+  "signal": "HOLD",
+  "confidence": 0,
+  "reason": "Trend: UP | RSI: 50.6 | \u0e23\u0e2d Signal \u0e17\u0e35\u0e48\u0e0a\u0e31\u0e14\u0e02\u0e36\u0e49\u0e19",
+  "rsi": 50.6,
+  "trend": "UP",
+  "ema_fast": 4247.55,
+  "ema_slow": 4247.21,
+  "atr": 1.4987,
+  "sl": 4213.86,
+  "tp": 4324.3,
+  "balance_usdt": 45.57862957,
+  "balance_xaut": 0.0,
+  "open_position": null,
+  "last_update": "2026-06-10 03:57 ICT"
 }
