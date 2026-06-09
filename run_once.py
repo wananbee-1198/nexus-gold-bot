@@ -138,6 +138,30 @@ def run():
             log.error(f"Order failed: {result.get('error')}")
 
     save_state(state)
+
+    # 4. ── ส่งสรุปสถานะทุก 6 รอบ (~1 ชั่วโมง) ─────────────────────
+    if state["cycle"] % 6 == 0:
+        sig_emoji = "🟢" if signal.action == "BUY" else "🔴" if signal.action == "SELL" else "🟡"
+        pos_text  = "ไม่มี"
+        if state.get("position"):
+            p = state["position"]
+            pnl = (price - p["entry"]) * p["quantity"] if p["side"] == "BUY" else (p["entry"] - price) * p["quantity"]
+            pos_text = f'{p["side"]} @ {p["entry"]:.2f} (P&L: {pnl:+.4f})'
+        status_msg = (
+            f"⚡ NEXUS GOLD — Hourly Update\n"
+            f"────────────────────\n"
+            f"💰 ราคา: {price:.2f} USDT\n"
+            f"{sig_emoji} Signal: {signal.action} ({signal.confidence}%)\n"
+            f"📈 RSI: {signal.rsi:.1f} | Trend: {signal.trend}\n"
+            f"────────────────────\n"
+            f"💵 USDT: {bal['usdt']:.4f}\n"
+            f"🥇 XAUT: {bal['xaut']:.6f}\n"
+            f"📋 Position: {pos_text}\n"
+            f"🔄 Cycle: #{state['cycle']} @ {now}"
+        )
+        notify(status_msg)
+        log.info("Hourly status sent to LINE")
+
     log.info("State saved. Done.")
 
 
