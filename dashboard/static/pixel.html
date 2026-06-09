@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS PIXEL — AI Trading</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;background:#050508;color:#c0d0ff;font-family:'Press Start 2P',monospace;image-rendering:pixelated}
+
+/* SCANLINES */
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.15) 2px,rgba(0,0,0,.15) 4px);pointer-events:none;z-index:999}
+
+/* TOP BAR */
+#topbar{height:44px;background:#08080f;border-bottom:2px solid #00ff88;display:flex;align-items:center;padding:0 12px;gap:0;flex-shrink:0;position:relative}
+#topbar::after{content:'';position:absolute;bottom:-4px;left:0;right:0;height:2px;background:#00ff8840}
+.tb-brand{font-size:10px;color:#00ff88;margin-right:20px;text-shadow:0 0 10px #00ff88;letter-spacing:2px}
+.tb-sep{width:2px;height:20px;background:#1a2a1a;margin:0 12px}
+.tb-kv{display:flex;flex-direction:column;gap:2px}
+.tb-lbl{font-size:6px;color:#4a6a4a;letter-spacing:1px}
+.tb-val{font-size:9px}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.pill{padding:3px 8px;font-size:7px;border:2px solid;font-family:'Press Start 2P',monospace}
+.pill-live{border-color:#00ff88;color:#00ff88;text-shadow:0 0 8px #00ff88;animation:blink 1.5s step-end infinite}
+.pill-off{border-color:#2a2a2a;color:#3a3a3a}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.nav-btn{padding:3px 8px;font-size:7px;border:2px solid #1a3a1a;color:#4a6a4a;background:transparent;cursor:pointer;font-family:'Press Start 2P',monospace;transition:all .1s}
+.nav-btn:hover{border-color:#00ff88;color:#00ff88}
+
+/* LAYOUT */
+#layout{display:flex;height:calc(100vh - 44px - 24px);overflow:hidden}
+#game-wrap{flex:1;position:relative;overflow:hidden}
+#game-canvas{display:block;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+
+/* SIDE PANEL */
+#panel{width:240px;flex-shrink:0;background:#06060c;border-left:2px solid #00ff8840;display:flex;flex-direction:column;overflow:hidden}
+.pcard{padding:10px 12px;border-bottom:1px solid #0a1a0a}
+.pcard.grow{flex:1;min-height:0;display:flex;flex-direction:column}
+.plbl{font-size:6px;color:#2a4a2a;letter-spacing:2px;margin-bottom:8px}
+.big-num{font-size:14px;color:#ffe600;text-shadow:0 0 12px #ffe600}
+.num-sub{font-size:6px;color:#2a4a2a;margin-top:4px}
+.sig-box{border:2px solid;padding:6px 8px;text-align:center;margin-bottom:6px}
+.sig-box.BUY{border-color:#00ff88;background:#00200e}
+.sig-box.SELL{border-color:#ff4d8b;background:#200010}
+.sig-box.HOLD{border-color:#ffe600;background:#201800}
+.sig-txt{font-size:14px}
+.sig-txt.BUY{color:#00ff88;text-shadow:0 0 12px #00ff88}
+.sig-txt.SELL{color:#ff4d8b;text-shadow:0 0 12px #ff4d8b}
+.sig-txt.HOLD{color:#ffe600;text-shadow:0 0 12px #ffe600}
+.sig-conf{font-size:6px;color:#4a6a4a;margin-top:4px}
+.prow{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #0a100a}
+.prow:last-child{border-bottom:none}
+.plbl2{font-size:6px;color:#2a4a2a}
+.pval{font-size:7px}
+.scroll{flex:1;overflow-y:auto;min-height:0}
+.scroll::-webkit-scrollbar{width:2px}
+.scroll::-webkit-scrollbar-thumb{background:#00ff8830}
+.ord-row{display:grid;grid-template-columns:20px 1fr 54px;gap:3px;align-items:center;padding:4px 0;border-bottom:1px solid #080f08;font-size:6px}
+.sdot{width:14px;height:14px;display:flex;align-items:center;justify-content:center;font-size:6px;border:1px solid}
+.sdot.buy{border-color:#00ff88;color:#00ff88}
+.sdot.sell{border-color:#ff4d8b;color:#ff4d8b}
+.log-item{display:flex;gap:4px;padding:3px 0;border-bottom:1px solid #08080f}
+.log-t{font-size:5px;color:#1a2a1a;flex-shrink:0;padding-top:1px}
+.log-m{font-size:6px;color:#4a6a5a;line-height:1.6}
+
+/* BOTTOM BAR */
+#statusbar{height:24px;background:#04040a;border-top:2px solid #00ff8820;display:flex;align-items:center;padding:0 12px;gap:12px;font-size:6px;color:#1a3a1a;flex-shrink:0}
+.sb-sep{color:#0a1a0a}
+
+/* COLOR UTILS */
+.cg{color:#00ff88}.cy{color:#ffe600}.cr{color:#ff4d8b}.cb{color:#00e5ff}.cp{color:#bf5fff}.co{color:#ff6b35}.cm{color:#2a4a2a}
+
+/* PIXEL MODAL */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;z-index:100}
+#modal.open{display:flex}
+.mbox{background:#06060e;border:2px solid #00ff88;width:min(700px,92vw);max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
+.mhead{padding:10px 14px;border-bottom:2px solid #00ff8830;display:flex;justify-content:space-between;align-items:center}
+.mtitle{font-size:8px;color:#00ff88;text-shadow:0 0 8px #00ff88}
+.mclose{font-size:10px;color:#ff4d8b;background:none;border:2px solid #ff4d8b;padding:2px 8px;cursor:pointer;font-family:'Press Start 2P',monospace}
+.mtabs{display:flex;gap:0;padding:8px 12px 0}
+.mtab{padding:4px 10px;font-size:6px;cursor:pointer;border:2px solid #0a1a0a;color:#2a4a2a;background:transparent;font-family:'Press Start 2P',monospace;border-bottom:none}
+.mtab.active{border-color:#00ff88;color:#00ff88;background:#001a08}
+.mchart{flex:1;padding:10px 14px;min-height:200px;max-height:360px}
+.mchart canvas{width:100%!important;height:100%!important}
+</style>
+</head>
+<body>
+
+<div id="topbar">
+  <div class="tb-brand">▶ NEXUS.EXE</div>
+  <div class="tb-kv"><div class="tb-lbl">XAUTUSDT</div><div class="tb-val cy" id="tb-price">0.00</div></div>
+  <div class="tb-sep"></div>
+  <div class="tb-kv"><div class="tb-lbl">SIGNAL</div><div class="tb-val cy" id="tb-sig">HOLD</div></div>
+  <div class="tb-sep"></div>
+  <div class="tb-kv"><div class="tb-lbl">RSI</div><div class="tb-val cy" id="tb-rsi">--</div></div>
+  <div class="tb-sep"></div>
+  <div class="tb-kv"><div class="tb-lbl">USDT</div><div class="tb-val cb" id="tb-bal">--</div></div>
+  <div class="tb-sep"></div>
+  <div class="tb-kv"><div class="tb-lbl">UPTIME</div><div class="tb-val cm" id="tb-up">00:00:00</div></div>
+  <div class="tb-right">
+    <button class="nav-btn" onclick="location.href='/'">DASH</button>
+    <button class="nav-btn" onclick="location.href='/office'">3D</button>
+    <button class="nav-btn" onclick="location.href='/zoo'">ZOO</button>
+    <div class="pill pill-off" id="conn-pill">◉ OFFLINE</div>
+  </div>
+</div>
+
+<div id="layout">
+  <div id="game-wrap"><canvas id="game-canvas"></canvas></div>
+  <div id="panel">
+    <div class="pcard">
+      <div class="plbl">▸ PRICE FEED</div>
+      <div class="big-num" id="p-price">-----.--</div>
+      <div class="num-sub" id="p-diff">-- USDT</div>
+    </div>
+    <div class="pcard">
+      <div class="plbl">▸ AI SIGNAL</div>
+      <div class="sig-box HOLD" id="sig-box">
+        <div class="sig-txt HOLD" id="sig-act">HOLD</div>
+        <div class="sig-conf" id="sig-conf">CONF: 0%</div>
+      </div>
+      <div style="font-size:6px;color:#2a4a2a;line-height:1.8" id="sig-reason">WAITING...</div>
+    </div>
+    <div class="pcard">
+      <div class="plbl">▸ INDICATORS</div>
+      <div class="prow"><span class="plbl2">EMA[9]</span><span class="pval cb" id="i-e9">--</span></div>
+      <div class="prow"><span class="plbl2">EMA[21]</span><span class="pval cm" id="i-e21">--</span></div>
+      <div class="prow"><span class="plbl2">RSI[14]</span><span class="pval cy" id="i-rsi">--</span></div>
+      <div class="prow"><span class="plbl2">ATR</span><span class="pval cm" id="i-atr">--</span></div>
+      <div class="prow"><span class="plbl2">TREND</span><span class="pval" id="i-trend">--</span></div>
+      <div class="prow"><span class="plbl2">SL</span><span class="pval cr" id="i-sl">--</span></div>
+      <div class="prow"><span class="plbl2">TP</span><span class="pval cg" id="i-tp">--</span></div>
+    </div>
+    <div class="pcard">
+      <div class="plbl" style="display:flex;justify-content:space-between">▸ ORDERS<span class="cm" id="ord-cnt">×0</span></div>
+      <div class="scroll" id="ord-list"><div style="padding:8px 0;font-size:6px;color:#1a2a1a">NO ORDERS YET...</div></div>
+    </div>
+    <div class="pcard grow">
+      <div class="plbl">▸ SYSTEM LOG</div>
+      <div class="scroll" id="log-box"><div class="log-item"><div class="log-t">--:--</div><div class="log-m">BOOT...</div></div></div>
+    </div>
+  </div>
+</div>
+
+<div id="statusbar">
+  <span class="cg" id="sb-st">■ OFFLINE</span>
+  <span class="sb-sep">│</span><span id="sb-time">--:--:--</span>
+  <span class="sb-sep">│</span><span id="sb-msg">INITIALIZING...</span>
+  <span style="margin-left:auto" class="sb-sep">│</span>
+  <span class="cm">BINANCE TH · XAUTUSDT · EMA9/21 · RSI14</span>
+</div>
+
+<div id="modal">
+  <div class="mbox">
+    <div class="mhead">
+      <div class="mtitle" id="m-title">▶ CHART.EXE</div>
+      <button class="mclose" onclick="closeModal()">✕</button>
+    </div>
+    <div class="mtabs">
+      <button class="mtab active" id="tab-p" onclick="switchTab('price')">PRICE+EMA</button>
+      <button class="mtab" id="tab-r" onclick="switchTab('rsi')">RSI</button>
+      <button class="mtab" id="tab-c" onclick="switchTab('combo')">COMBO</button>
+    </div>
+    <div class="mchart"><canvas id="modal-chart"></canvas></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+// ═══════════════════════════════════════════════════
+//  CANVAS + PIXEL SETUP
+// ═══════════════════════════════════════════════════
+const canvas = document.getElementById('game-canvas');
+const ctx    = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+let W = 0, H = 0;
+const P = 3; // pixel unit (each "game pixel" = 3 canvas pixels)
+
+// ISO grid
+let TW = 64, TH = 32; // tile size — dynamic
+const COLS = 11, ROWS = 8;
+let OX = 0, OY = 0;
+
+function resize() {
+  const wrap = document.getElementById('game-wrap');
+  W = canvas.width  = wrap.clientWidth;
+  H = canvas.height = wrap.clientHeight;
+  // scale tiles so room fills ~90% of canvas
+  const baseW = (COLS + ROWS) * 32;
+  const baseH = (COLS + ROWS) * 16 + 160;
+  const sc = Math.min(W * 0.88 / baseW, H * 0.88 / baseH);
+  TW = Math.round(64 * sc);
+  TH = Math.round(32 * sc);
+  OX = Math.round(W / 2);
+  OY = Math.round(TH * 5 + 24);
+}
+
+function iso(c, r) {
+  return {
+    x: Math.round(OX + (c - r) * TW / 2),
+    y: Math.round(OY + (c + r) * TH / 2)
+  };
+}
+
+// ═══════════════════════════════════════════════════
+//  COLOR PALETTE
+// ═══════════════════════════════════════════════════
+const C = {
+  floor0:  '#06060e', floor1:  '#08081a',
+  wall0:   '#04040c', wall1:   '#060610',
+  grid:    '#0a1a2a', gridhi:  '#0d2a1a',
+  nGreen:  '#00ff88', nCyan:   '#00e5ff',
+  nYellow: '#ffe600', nOrange: '#ff6b35',
+  nPink:   '#ff4d8b', nPurple: '#bf5fff',
+  bg:      '#050508',
+};
+
+// ═══════════════════════════════════════════════════
+//  AGENTS
+// ═══════════════════════════════════════════════════
+const AGENTS = [
+  { id:'leo',  name:'LEO',  col:1.5, row:1.5, suit:'#0a2060', hi:'#00e5ff', neon:C.nCyan,   role:'ALPHA' },
+  { id:'eli',  name:'ELI',  col:7.5, row:1,   suit:'#003320', hi:'#00ff88', neon:C.nGreen,  role:'SIGMA' },
+  { id:'gigi', name:'GIGI', col:4.5, row:3.5, suit:'#2a1800', hi:'#ffe600', neon:C.nYellow, role:'DELTA' },
+  { id:'tora', name:'TORA', col:1.5, row:6.5, suit:'#300010', hi:'#ff4d8b', neon:C.nPink,   role:'OMEGA' },
+  { id:'kiki', name:'KIKI', col:7.5, row:6,   suit:'#1a0840', hi:'#bf5fff', neon:C.nPurple, role:'GAMMA' },
+];
+
+// ═══════════════════════════════════════════════════
+//  BUBBLE MESSAGES
+// ═══════════════════════════════════════════════════
+const MSGS = {
+  leo:  { BUY:['CROSSOVER↑','BUY SIGNAL!','EMA BREAK!'], SELL:['CROSSOVER↓','SELL!','TREND↓'], HOLD:['SCANNING..','MONITORING','WAIT..'] },
+  eli:  { BUY:['RSI<65 ✓','CONF:88%','COMPUTE OK'], SELL:['RSI>35 ✓','SELL CONF','BEARISH'], HOLD:['CALC EMA..','PROCESS..','ANALYZE..'] },
+  gigi: { BUY:['SL/TP SET','R:R=2.25','APPROVE!'], SELL:['RISK OK','APPROVED','EXECUTE!'], HOLD:['CHECK R:R','RISK SCAN','STANDBY'] },
+  tora: { BUY:['SEND BUY!','EXECUTING','FILLED! ✓'], SELL:['SEND SELL','ORDER GO!','FILLED! ✓'], HOLD:['STANDBY..','READY.','WAIT GO'] },
+  kiki: { BUY:['NOTIFY!','LINE SENT','BROADCAST'], SELL:['ALERT OUT','LINE SENT','MSG SENT'], HOLD:['SYNC DATA','RELAY..','MONITOR'] },
+};
+
+let bubbles = {};
+let msgTimers = {};
+let curSig = 'HOLD';
+
+function startBubble(id, sig) {
+  const msgs = MSGS[id]?.[sig] || MSGS[id]?.HOLD;
+  let i = 0;
+  bubbles[id] = msgs[i];
+  clearInterval(msgTimers[id]);
+  msgTimers[id] = setInterval(() => { i = (i+1)%msgs.length; bubbles[id] = msgs[i]; }, 2500 + Math.random()*1500);
+}
+
+AGENTS.forEach(a => startBubble(a.id, 'HOLD'));
+
+function updateBubbles(sig) {
+  if (sig === curSig) return;
+  curSig = sig;
+  AGENTS.forEach(a => startBubble(a.id, sig));
+}
+
+// ═══════════════════════════════════════════════════
+//  PIXEL DRAWING HELPERS
+// ═══════════════════════════════════════════════════
+function fillPx(x, y, w, h, color) {
+  ctx.fillStyle = color;
+  ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h));
+}
+
+// draw pixel-art diamond (isometric tile)
+function drawTile(cx, cy, tw, th, fill, edge) {
+  // diamond shape
+  ctx.fillStyle = fill;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy);           // top
+  ctx.lineTo(cx+tw/2, cy+th/2); // right
+  ctx.lineTo(cx, cy+th);        // bottom
+  ctx.lineTo(cx-tw/2, cy+th/2); // left
+  ctx.closePath();
+  ctx.fill();
+  if (edge) {
+    ctx.strokeStyle = edge;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+}
+
+// pixel-art box (isometric top+left+right face)
+function drawBox(col, row, bW, bD, bH, colors) {
+  const p00 = iso(col, row), p10 = iso(col+bW, row);
+  const p11 = iso(col+bW, row+bD), p01 = iso(col, row+bD);
+  const dn = h => ({x:0, y:h});
+  const mv = (p,d) => ({x:p.x+d.x, y:p.y+d.y});
+
+  // top
+  ctx.fillStyle = colors[0];
+  ctx.beginPath();
+  [p00,p10,p11,p01].forEach((p,i) => i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = colors[3]||'rgba(0,0,0,.5)'; ctx.lineWidth=1; ctx.stroke();
+
+  // front face
+  ctx.fillStyle = colors[1];
+  ctx.beginPath();
+  [p01,p11,mv(p11,dn(bH)),mv(p01,dn(bH))].forEach((p,i) => i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = colors[3]||'rgba(0,0,0,.5)'; ctx.stroke();
+
+  // right face
+  ctx.fillStyle = colors[2];
+  ctx.beginPath();
+  [p10,p11,mv(p11,dn(bH)),mv(p10,dn(bH))].forEach((p,i) => i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = colors[3]||'rgba(0,0,0,.5)'; ctx.stroke();
+}
+
+// ═══════════════════════════════════════════════════
+//  PIXEL ART CHARACTER SPRITES
+// ═══════════════════════════════════════════════════
+// Each character uses pixel art building blocks
+// S = sprite pixel unit (scaled from tile size)
+const agents_emoji = { leo:'🦁', eli:'🐘', gigi:'🦒', tora:'🐯', kiki:'🦜' };
+
+function drawPixelChar(agent, bx, by) {
+  const S = Math.max(2, Math.round(TH * 0.22));
+  const { suit, hi, neon, id } = agent;
+  const isAct = AGENTS[activeAgent]?.id === id;
+
+  // glow halo if active
+  if (isAct) {
+    const grd = ctx.createRadialGradient(bx, by-S*10, 0, bx, by-S*10, S*9);
+    grd.addColorStop(0, neon+'40');
+    grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd;
+    ctx.fillRect(bx-S*9, by-S*19, S*18, S*18);
+  }
+
+  // shadow
+  ctx.fillStyle = 'rgba(0,0,0,.4)';
+  ctx.beginPath(); ctx.ellipse(bx, by, S*5, S*2, 0, 0, Math.PI*2); ctx.fill();
+
+  // LEGS
+  ctx.fillStyle = '#080810';
+  fillPx(bx-S*3, by-S*7, S*2, S*7, '#0a0a18');
+  fillPx(bx+S*1, by-S*7, S*2, S*7, '#0a0a18');
+  // boots
+  fillPx(bx-S*4, by-S*2, S*4, S*2, neon);
+  fillPx(bx+S*0, by-S*2, S*4, S*2, neon);
+
+  // BODY
+  ctx.fillStyle = suit;
+  fillPx(bx-S*4, by-S*18, S*8, S*12, suit);
+  // suit highlight
+  fillPx(bx-S*4, by-S*18, S*2, S*12, hi+'44');
+  // COLLAR/SHIRT
+  fillPx(bx-S*1, by-S*17, S*2, S*8, '#c8c8e0');
+  // TIE
+  fillPx(bx-S*0.5, by-S*16, S*1, S*6, neon);
+
+  // ARMS
+  fillPx(bx-S*6, by-S*18, S*2, S*8, suit);
+  fillPx(bx+S*4, by-S*18, S*2, S*8, suit);
+  // hands
+  ctx.fillStyle = '#c8a878';
+  ctx.beginPath(); ctx.arc(bx-S*5, by-S*10, S*1.5, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(bx+S*5, by-S*10, S*1.5, 0, Math.PI*2); ctx.fill();
+
+  // HEAD base circle
+  const headGrd = ctx.createRadialGradient(bx-S, by-S*24, S, bx, by-S*22, S*6);
+  headGrd.addColorStop(0, '#f5e8d0');
+  headGrd.addColorStop(1, '#d4b888');
+  ctx.fillStyle = headGrd;
+  ctx.shadowColor = neon; ctx.shadowBlur = isAct ? 14 : 6;
+  ctx.beginPath(); ctx.arc(bx, by-S*23, S*6, 0, Math.PI*2); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // HEAD border (pixel style)
+  ctx.strokeStyle = neon+'80'; ctx.lineWidth = S*0.6;
+  ctx.beginPath(); ctx.arc(bx, by-S*23, S*6, 0, Math.PI*2); ctx.stroke();
+
+  // EMOJI head
+  ctx.font = `${S*7}px serif`;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(agents_emoji[id] || '🤖', bx, by-S*23);
+
+  // NAME TAG (pixel style box)
+  const nameW = agent.name.length * S * 4 + S*4;
+  fillPx(bx - nameW/2, by + S*1, nameW, S*7, '#000a04');
+  ctx.strokeStyle = neon + '80'; ctx.lineWidth = 1;
+  ctx.strokeRect(bx - nameW/2, by + S*1, nameW, S*7);
+  ctx.font = `${S*4}px 'Press Start 2P', monospace`;
+  ctx.fillStyle = neon; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText(agent.name, bx, by + S*2.5);
+
+  ctx.font = `${S*3}px 'Press Start 2P', monospace`;
+  ctx.fillStyle = neon + '80';
+  ctx.fillText(agent.role, bx, by + S*10);
+}
+
+// ═══════════════════════════════════════════════════
+//  SPEECH BUBBLES (pixel style)
+// ═══════════════════════════════════════════════════
+function drawBubble(agent) {
+  const pos = iso(agent.col + 0.8, agent.row + 1.0);
+  const txt = bubbles[agent.id] || '...';
+  const S = Math.max(2, Math.round(TH * 0.22));
+  const bx = pos.x - S*14;
+  const by = pos.y - S*40;
+  const bw = S*28; const bh = S*13;
+
+  // bubble bg
+  ctx.fillStyle = '#000d06ee';
+  ctx.strokeStyle = agent.neon + 'cc';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.rect(bx, by, bw, bh); ctx.fill(); ctx.stroke();
+
+  // pixel tail
+  ctx.fillStyle = '#000d06';
+  ctx.strokeStyle = agent.neon + 'cc';
+  ctx.beginPath();
+  ctx.moveTo(pos.x-S, by+bh);
+  ctx.lineTo(pos.x+S, by+bh);
+  ctx.lineTo(pos.x, by+bh+S*4);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+
+  // text
+  ctx.font = `${S*3}px 'Press Start 2P', monospace`;
+  ctx.fillStyle = agent.neon;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+  ctx.fillText(txt, bx + bw/2, by + S*2);
+
+  ctx.font = `${S*2.5}px 'Press Start 2P', monospace`;
+  ctx.fillStyle = agent.neon + '60';
+  ctx.fillText(`[${agent.role}]`, bx + bw/2, by + bh - S*4);
+}
+
+// ═══════════════════════════════════════════════════
+//  MONITOR ON DESK (pixel art screen)
+// ═══════════════════════════════════════════════════
+let monitorAreas = [];
+
+function drawDesk(agent) {
+  const { col, row, suit, neon } = agent;
+  // Desk box (pixel art) — bigger
+  drawBox(col-0.3, row-0.2, 2.2, 1.6, TH*0.65,
+    [suit+'cc', suit+'88', suit+'55', neon+'30']);
+
+  // Monitor
+  const mp  = iso(col + 0.7, row + 0.4);
+  const mW  = TW * 0.8, mH = TH * 1.6;
+  const mx  = mp.x - mW/2, my = mp.y - TH*0.6 - mH;
+
+  // frame (pixel border)
+  fillPx(mx-2, my-2, mW+4, mH+4, '#111118');
+  fillPx(mx, my, mW, mH, '#04040c');
+
+  // screen glow border
+  ctx.strokeStyle = neon + '80'; ctx.lineWidth = 1;
+  ctx.strokeRect(mx, my, mW, mH);
+
+  // draw mini chart
+  drawScreenChart(mx+2, my+2, mW-4, mH-4, neon);
+
+  // agent label on screen
+  ctx.font = `${Math.max(5, TH*0.2)}px 'Press Start 2P', monospace`;
+  ctx.fillStyle = neon + 'cc'; ctx.textAlign = 'center';
+  ctx.fillText(agent.name, mx+mW/2, my+mH-4);
+
+  // screen glow effect
+  const sg = ctx.createRadialGradient(mx+mW/2, my+mH/2, 0, mx+mW/2, my+mH/2, mW);
+  sg.addColorStop(0, neon+'18'); sg.addColorStop(1, 'transparent');
+  ctx.fillStyle = sg; ctx.fillRect(mx-mW, my-mH, mW*3, mH*3);
+
+  // stand (pixel style)
+  fillPx(mx+mW/2-2, my+mH, 4, 8, '#111118');
+  fillPx(mx+mW/2-8, my+mH+8, 16, 3, '#111118');
+
+  // store click area
+  monitorAreas.push({ x:mx, y:my, w:mW, h:mH, id:agent.id, name:agent.name, neon });
+}
+
+function drawScreenChart(x, y, w, h, neon) {
+  if (priceHistory.length < 2) return;
+  const data = priceHistory.slice(-Math.floor(w/2));
+  const mn = Math.min(...data), mx_v = Math.max(...data), rng = mx_v-mn||1;
+  const py = v => y + h - ((v-mn)/rng)*(h-2);
+  const px = i => x + (i/(data.length-1))*w;
+
+  // area fill
+  ctx.beginPath();
+  data.forEach((v,i) => i===0?ctx.moveTo(px(i),py(v)):ctx.lineTo(px(i),py(v)));
+  ctx.lineTo(px(data.length-1),y+h); ctx.lineTo(x,y+h); ctx.closePath();
+  const ag = ctx.createLinearGradient(0,y,0,y+h);
+  ag.addColorStop(0,neon+'30'); ag.addColorStop(1,'transparent');
+  ctx.fillStyle=ag; ctx.fill();
+
+  // line
+  ctx.beginPath();
+  data.forEach((v,i) => i===0?ctx.moveTo(px(i),py(v)):ctx.lineTo(px(i),py(v)));
+  ctx.strokeStyle=neon+'cc'; ctx.lineWidth=1; ctx.stroke();
+}
+
+// ═══════════════════════════════════════════════════
+//  ROOM DRAWING
+// ═══════════════════════════════════════════════════
+function drawRoom() {
+  const wallH = 6 * TH;
+
+  // back wall tiles
+  for (let c=0; c<COLS; c++) {
+    const p0=iso(c,0), p1=iso(c+1,0);
+    ctx.fillStyle = c%2===0?'#060614':'#050510';
+    ctx.beginPath();
+    ctx.moveTo(p0.x,p0.y); ctx.lineTo(p1.x,p1.y);
+    ctx.lineTo(p1.x,p1.y-wallH); ctx.lineTo(p0.x,p0.y-wallH);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#0a0a20'; ctx.lineWidth=1; ctx.stroke();
+
+    // pixel art windows / screens on back wall
+    if (c===2||c===5||c===9) {
+      const wx=(p0.x+p1.x)/2, wy=p0.y-wallH*0.65;
+      const ww=TW*0.55, wh=wallH*0.38;
+      fillPx(wx-ww/2-2, wy-2, ww+4, wh+4, '#0a0a18');
+      fillPx(wx-ww/2, wy, ww, wh, '#020a0e');
+      // screen glow
+      ctx.strokeStyle=(c===4?C.nGreen:c===1?C.nCyan:C.nYellow)+'80'; ctx.lineWidth=1;
+      ctx.strokeRect(wx-ww/2, wy, ww, wh);
+      // scanlines on screen
+      for (let sy=wy+2; sy<wy+wh-2; sy+=3) {
+        ctx.fillStyle='rgba(0,255,136,.04)';
+        ctx.fillRect(wx-ww/2+1, sy, ww-2, 1);
+      }
+      // screen text
+      ctx.font=`${Math.max(5,TW*0.14)}px 'Press Start 2P',monospace`;
+      ctx.fillStyle = c===4?C.nGreen+'cc':c===1?C.nCyan+'cc':C.nYellow+'cc';
+      ctx.textAlign='center';
+      if(c===5){ ctx.fillText(priceHistory.length>0?priceHistory[priceHistory.length-1].toFixed(0):'----', wx, wy+wh/2-4); ctx.fillStyle='rgba(0,255,136,.4)'; ctx.fillText('XAUTUSDT',wx,wy+wh/2+8); }
+      if(c===2){ ctx.fillText(curSig, wx, wy+wh/2); }
+      if(c===9){ ctx.fillText(rsiVal?rsiVal.toFixed(0):'--', wx, wy+wh/2); }
+    }
+  }
+
+  // left wall tiles
+  for (let r=0; r<ROWS; r++) {
+    const p0=iso(0,r), p1=iso(0,r+1);
+    ctx.fillStyle = r%2===0?'#05050f':'#06060c';
+    ctx.beginPath();
+    ctx.moveTo(p0.x,p0.y); ctx.lineTo(p1.x,p1.y);
+    ctx.lineTo(p1.x,p1.y-wallH); ctx.lineTo(p0.x,p0.y-wallH);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#0a0a1a'; ctx.lineWidth=1; ctx.stroke();
+
+    // server racks on left wall
+    if (r===1||r===5) {
+      const rx=(p0.x+p1.x)/2, ry=p0.y-wallH*0.55;
+      const rw=TW*0.5, rh=wallH*0.42;
+      fillPx(rx-rw/2-1,ry-1,rw+2,rh+2,'#0a0a14');
+      fillPx(rx-rw/2,ry,rw,rh,'#06060f');
+      ctx.strokeStyle='#1a1a30'; ctx.lineWidth=1; ctx.strokeRect(rx-rw/2,ry,rw,rh);
+      // rack blinks
+      for(let li=0;li<4;li++){
+        const blinkColor = Math.random()>0.7?C.nGreen:Math.random()>0.5?C.nCyan:'#1a2a1a';
+        fillPx(rx-rw/2+3,ry+4+li*8,4,3,blinkColor);
+      }
+    }
+  }
+
+  // floor tiles (checker pattern with neon grid)
+  for (let r=0; r<ROWS; r++) {
+    for (let c=0; c<COLS; c++) {
+      const p00=iso(c,r), p10=iso(c+1,r), p11=iso(c+1,r+1), p01=iso(c,r+1);
+      const isEven = (c+r)%2===0;
+      ctx.fillStyle = isEven?'#08081a':'#060614';
+      ctx.beginPath();
+      [p00,p10,p11,p01].forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+      ctx.closePath(); ctx.fill();
+      // neon grid edge
+      ctx.strokeStyle = isEven?'#0d1a2a':'#0a1020';
+      ctx.lineWidth=1; ctx.stroke();
+    }
+  }
+
+  // floor center glow
+  const fc = iso(COLS/2, ROWS/2);
+  const fg = ctx.createRadialGradient(fc.x,fc.y,0,fc.x,fc.y,TW*2);
+  fg.addColorStop(0,'rgba(0,255,136,.04)');
+  fg.addColorStop(1,'transparent');
+  ctx.fillStyle=fg; ctx.fillRect(0, OY, W, H-OY);
+}
+
+// ═══════════════════════════════════════════════════
+//  DECORATIONS
+// ═══════════════════════════════════════════════════
+function drawDeco() {
+  // Corner lamp post (neon style)
+  const lp = iso(0.4, 0.4);
+  fillPx(lp.x-2, lp.y-40, 4, 40, '#1a1a2a');
+  const lampG = ctx.createRadialGradient(lp.x, lp.y-40, 0, lp.x, lp.y-40, 20);
+  lampG.addColorStop(0,'rgba(0,229,255,.3)');
+  lampG.addColorStop(1,'transparent');
+  ctx.fillStyle=lampG; ctx.fillRect(lp.x-20, lp.y-60, 40, 40);
+  fillPx(lp.x-4, lp.y-42, 8, 4, C.nCyan);
+
+  // Neon sign on back wall
+  const ns = iso(4, 0);
+  ctx.font=`${Math.max(8,TW*0.18)}px 'Press Start 2P',monospace`;
+  ctx.fillStyle=C.nGreen+'cc';
+  ctx.shadowColor=C.nGreen; ctx.shadowBlur=14;
+  ctx.textAlign='center';
+  ctx.fillText('NEXUS.AI', ns.x, ns.y-6*TH+4);
+  ctx.shadowBlur=0;
+
+  // floor neon stripes at edges
+  const edgeL = iso(0, ROWS);
+  const edgeR = iso(COLS, 0);
+  ctx.strokeStyle=C.nGreen+'30'; ctx.lineWidth=1;
+  // left edge
+  ctx.beginPath(); ctx.moveTo(iso(0,0).x, iso(0,0).y); ctx.lineTo(iso(0,ROWS).x, iso(0,ROWS).y); ctx.stroke();
+  // right edge
+  ctx.beginPath(); ctx.moveTo(iso(COLS,0).x, iso(COLS,0).y); ctx.lineTo(iso(COLS,ROWS).x, iso(COLS,ROWS).y); ctx.stroke();
+}
+
+// ═══════════════════════════════════════════════════
+//  MAIN RENDER
+// ═══════════════════════════════════════════════════
+let animTick = 0, activeAgent = 0;
+let priceHistory = [], rsiHistory = [], rsiVal = 0;
+
+function render() {
+  animTick++;
+  if (animTick % 150 === 0) activeAgent = (activeAgent+1) % AGENTS.length;
+
+  ctx.clearRect(0,0,W,H);
+
+  // BG gradient
+  const bg = ctx.createLinearGradient(0,0,0,H);
+  bg.addColorStop(0,'#030306'); bg.addColorStop(1,'#050508');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+
+  monitorAreas = [];
+  drawRoom();
+  drawDeco();
+
+  // sort agents by depth
+  const sorted = [...AGENTS].sort((a,b) => (a.col+a.row)-(b.col+b.row));
+  sorted.forEach(a => {
+    drawDesk(a);
+    const p = iso(a.col+0.8, a.row+1.0);
+    drawPixelChar(a, p.x, p.y);
+    drawBubble(a);
+  });
+
+  // pixel art vignette corners
+  const vig = ctx.createRadialGradient(W/2,H/2,H*0.3,W/2,H/2,H*0.8);
+  vig.addColorStop(0,'transparent'); vig.addColorStop(1,'rgba(0,0,0,.6)');
+  ctx.fillStyle=vig; ctx.fillRect(0,0,W,H);
+
+  requestAnimationFrame(render);
+}
+
+// ═══════════════════════════════════════════════════
+//  CLICK → CHART MODAL
+// ═══════════════════════════════════════════════════
+canvas.addEventListener('click', e => {
+  const r = canvas.getBoundingClientRect();
+  const mx = e.clientX-r.left, my = e.clientY-r.top;
+  for (const a of monitorAreas) {
+    if (mx>=a.x&&mx<=a.x+a.w&&my>=a.y&&my<=a.y+a.h) { openModal(a); return; }
+  }
+});
+canvas.addEventListener('mousemove', e => {
+  const r = canvas.getBoundingClientRect();
+  const mx = e.clientX-r.left, my = e.clientY-r.top;
+  canvas.style.cursor = monitorAreas.some(a=>mx>=a.x&&mx<=a.x+a.w&&my>=a.y&&my<=a.y+a.h)?'pointer':'default';
+});
+
+// ═══════════════════════════════════════════════════
+//  CHART MODAL
+// ═══════════════════════════════════════════════════
+let mChart = null, curTab = 'price';
+
+function openModal(agent) {
+  document.getElementById('m-title').textContent = `▶ ${agent.name} :: CHART.EXE`;
+  document.getElementById('m-title').style.color = agent.neon;
+  document.getElementById('modal').classList.add('open');
+  switchTab('price');
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  if(mChart){mChart.destroy();mChart=null;}
+}
+document.getElementById('modal').addEventListener('click',e=>{if(e.target===document.getElementById('modal'))closeModal();});
+
+function switchTab(t) {
+  curTab=t;
+  ['price','rsi','combo'].forEach(x=>{
+    document.getElementById('tab-'+x[0]).classList.toggle('active',x===t);
+  });
+  buildChart(t);
+}
+
+function buildChart(tab) {
+  if(mChart){mChart.destroy();mChart=null;}
+  const cv = document.getElementById('modal-chart');
+  const labels = priceHistory.map((_,i)=>i);
+  const pxFont = { family:"'Press Start 2P',monospace", size:8 };
+  const chartCfg = {
+    responsive:true, maintainAspectRatio:false, animation:{duration:300},
+    plugins:{legend:{labels:{color:'#2a4a2a',font:pxFont}}},
+    scales:{
+      x:{ticks:{color:'#1a3a1a',font:{size:7}},grid:{color:'#0a1a0a'}},
+      y:{ticks:{color:'#1a4a2a',font:{size:7}},grid:{color:'#0a1a0a'}},
+    }
+  };
+  const ema9  = calcEMA(priceHistory, 9);
+  const ema21 = calcEMA(priceHistory, 21);
+
+  if(tab==='price'){
+    mChart=new Chart(cv,{type:'line',data:{labels,datasets:[
+      {label:'PRICE',data:priceHistory,borderColor:'#ffe600',backgroundColor:'rgba(255,230,0,.06)',borderWidth:2,pointRadius:0,fill:true,tension:.3},
+      {label:'EMA9', data:ema9, borderColor:'#00e5ff',borderWidth:1.5,pointRadius:0,fill:false,tension:.4},
+      {label:'EMA21',data:ema21,borderColor:'#bf5fff',borderWidth:1.5,pointRadius:0,fill:false,tension:.4,borderDash:[4,2]},
+    ]},options:chartCfg});
+  } else if(tab==='rsi'){
+    mChart=new Chart(cv,{type:'line',data:{labels:rsiHistory.map((_,i)=>i),datasets:[
+      {label:'RSI[14]',data:rsiHistory,borderColor:'#ffe600',backgroundColor:'rgba(255,230,0,.04)',borderWidth:2,pointRadius:0,fill:true,tension:.4},
+      {label:'OB[65]',data:new Array(rsiHistory.length).fill(65),borderColor:'rgba(255,77,139,.4)',borderWidth:1,pointRadius:0,fill:false,borderDash:[6,3]},
+      {label:'OS[35]',data:new Array(rsiHistory.length).fill(35),borderColor:'rgba(0,255,136,.4)',borderWidth:1,pointRadius:0,fill:false,borderDash:[6,3]},
+    ]},options:{...chartCfg,scales:{...chartCfg.scales,y:{...chartCfg.scales.y,min:0,max:100}}}});
+  } else {
+    mChart=new Chart(cv,{type:'line',data:{labels,datasets:[
+      {label:'PRICE',data:priceHistory,borderColor:'#ffe600',borderWidth:2,pointRadius:0,fill:false,tension:.3,yAxisID:'y'},
+      {label:'RSI',  data:rsiHistory.slice(-priceHistory.length),borderColor:'#00ff88',borderWidth:1.5,pointRadius:0,fill:false,tension:.4,yAxisID:'y2',borderDash:[3,2]},
+    ]},options:{...chartCfg,scales:{x:chartCfg.scales.x,y:{...chartCfg.scales.y,position:'left'},y2:{...chartCfg.scales.y,position:'right',min:0,max:100,grid:{drawOnChartArea:false}}}}});
+  }
+}
+
+function calcEMA(data, p) {
+  if(data.length<p) return [];
+  const k=2/(p+1); let e=data.slice(0,p).reduce((a,b)=>a+b,0)/p;
+  const r=new Array(p-1).fill(null); r.push(e);
+  for(let i=p;i<data.length;i++){e=data[i]*k+e*(1-k);r.push(e);}
+  return r;
+}
+
+// ═══════════════════════════════════════════════════
+//  PANEL + STATE
+// ═══════════════════════════════════════════════════
+function fmt(n,d=2){return n!=null?parseFloat(n).toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g,','):'--';}
+function s2h(s){return[Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(x=>String(x).padStart(2,'0')).join(':');}
+function nowStr(){return new Date().toLocaleTimeString('th-TH',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});}
+
+function addLog(msg,cls=''){
+  const el=document.createElement('div'); el.className='log-item';
+  el.innerHTML=`<div class="log-t">${nowStr().slice(0,5)}</div><div class="log-m ${cls}">${msg}</div>`;
+  const b=document.getElementById('log-box'); b.insertBefore(el,b.firstChild);
+  if(b.children.length>40)b.removeChild(b.lastChild);
+}
+
+let prevP=0,prevC=0,prevSig='';
+
+function applyState(s){
+  const price=s.price||0, sig=s.signal||'HOLD', conf=s.confidence||0;
+  rsiVal = s.rsi ? parseFloat(s.rsi) : 0;
+
+  // topbar
+  document.getElementById('tb-price').textContent=fmt(price);
+  document.getElementById('tb-sig').textContent=sig;
+  document.getElementById('tb-sig').style.color=sig==='BUY'?'#00ff88':sig==='SELL'?'#ff4d8b':'#ffe600';
+  document.getElementById('tb-rsi').textContent=s.rsi?parseFloat(s.rsi).toFixed(1):'--';
+  document.getElementById('tb-bal').textContent=fmt(s.balance_usdt||0);
+  document.getElementById('tb-up').textContent=s2h(s.uptime_sec||0);
+
+  // price card
+  document.getElementById('p-price').textContent=fmt(price);
+  if(prevP>0){const d=price-prevP;document.getElementById('p-diff').textContent=`${d>=0?'+':''}${d.toFixed(2)} USDT`;document.getElementById('p-diff').style.color=d>=0?'#00ff88':'#ff4d8b';}
+  if(price)prevP=price;
+
+  // signal
+  document.getElementById('sig-box').className=`sig-box ${sig}`;
+  document.getElementById('sig-act').textContent=sig;
+  document.getElementById('sig-act').className=`sig-txt ${sig}`;
+  document.getElementById('sig-conf').textContent=`CONF: ${conf}%`;
+  document.getElementById('sig-reason').textContent=(s.reason||'--').toUpperCase();
+
+  // indicators
+  document.getElementById('i-e9').textContent=s.ema_fast?fmt(s.ema_fast):'--';
+  document.getElementById('i-e21').textContent=s.ema_slow?fmt(s.ema_slow):'--';
+  const ri=document.getElementById('i-rsi');
+  ri.textContent=s.rsi?parseFloat(s.rsi).toFixed(1):'--';
+  ri.style.color=(s.rsi||50)>65?'#ff4d8b':(s.rsi||50)<35?'#00ff88':'#ffe600';
+  document.getElementById('i-atr').textContent=s.atr?parseFloat(s.atr).toFixed(4):'--';
+  const te=document.getElementById('i-trend');
+  te.textContent=s.trend==='UP'?'▲ UP':s.trend==='DOWN'?'▼ DOWN':'--';
+  te.style.color=s.trend==='UP'?'#00ff88':s.trend==='DOWN'?'#ff4d8b':'#2a4a2a';
+  document.getElementById('i-sl').textContent=s.sl?fmt(s.sl):'--';
+  document.getElementById('i-tp').textContent=s.tp?fmt(s.tp):'--';
+
+  // histories
+  if(s.price_history?.length) priceHistory=s.price_history;
+  else if(price>0){priceHistory.push(price);if(priceHistory.length>200)priceHistory.shift();}
+  if(s.rsi){rsiHistory.push(parseFloat(s.rsi));if(rsiHistory.length>200)rsiHistory.shift();}
+
+  // orders
+  if(s.orders){
+    document.getElementById('ord-cnt').textContent=`×${s.orders.length}`;
+    const el=document.getElementById('ord-list');
+    if(!s.orders.length){el.innerHTML='<div style="padding:8px 0;font-size:6px;color:#1a2a1a">NO ORDERS..</div>';}
+    else el.innerHTML=[...s.orders].reverse().map(o=>{
+      const pnl=o.pnl||0,isOpen=o.status==='OPEN';
+      return`<div class="ord-row"><div class="sdot ${o.side.toLowerCase()}">${o.side==='BUY'?'B':'S'}</div><div style="font-size:6px;color:#2a4a3a">${fmt(o.entry)}</div><div style="font-size:6px;text-align:right;color:${isOpen?'#1a3a2a':pnl>=0?'#00ff88':'#ff4d8b'}">${isOpen?'OPEN':(pnl>=0?'+':'')+pnl.toFixed(3)}</div></div>`;
+    }).join('');
+  }
+
+  updateBubbles(sig);
+  if(s.cycle&&s.cycle!==prevC){prevC=s.cycle;addLog(`CYC#${s.cycle} · ${fmt(price)} · ${sig}(${conf}%)`,'cg');}
+  if(prevSig&&sig!==prevSig)addLog(`SIG: ${prevSig}→${sig}`,'cy');
+  prevSig=sig;
+
+  document.getElementById('sb-msg').textContent=`CYC:${s.cycle||0} · ${fmt(price)} · RSI:${s.rsi?parseFloat(s.rsi).toFixed(1):'--'} · ${sig} ${conf}%`;
+  if(document.getElementById('modal').classList.contains('open'))buildChart(curTab);
+}
+
+// ═══════════════════════════════════════════════════
+//  SOCKET.IO
+// ═══════════════════════════════════════════════════
+const socket = io();
+socket.on('connect',()=>{
+  document.getElementById('conn-pill').className='pill pill-live';
+  document.getElementById('conn-pill').textContent='◉ ONLINE';
+  document.getElementById('sb-st').textContent='■ ONLINE';
+  document.getElementById('sb-st').style.color='#00ff88';
+  addLog('CONNECTED TO BOT SERVER','cg');
+});
+socket.on('disconnect',()=>{
+  document.getElementById('conn-pill').className='pill pill-off';
+  document.getElementById('conn-pill').textContent='◉ OFFLINE';
+  document.getElementById('sb-st').textContent='■ OFFLINE';
+  document.getElementById('sb-st').style.color='#ff4d8b';
+  addLog('CONNECTION LOST','cr');
+});
+socket.on('state',applyState);
+
+// CLOCK
+setInterval(()=>{document.getElementById('sb-time').textContent=new Date().toLocaleTimeString('th-TH',{hour12:false});},1000);
+
+// INIT
+window.addEventListener('resize',resize);
+resize();
+render();
+</script>
+</body>
+</html>

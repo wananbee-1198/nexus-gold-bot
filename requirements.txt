@@ -1,0 +1,32 @@
+# NEXUS GOLD — Python Dependencies
+# รันคำสั่ง: pip install -r requirements.txt
+
+# Binance API
+python-binance==1.0.19
+binance-connector==3.8.0
+
+# Data & Analysis
+pandas==2.1.4
+numpy==1.26.4
+ta==0.11.0              # Technical Analysis library (EMA, RSI, ATR)
+
+# Web Server (Dashboard)
+flask==3.0.2
+flask-socketio==5.3.6
+flask-cors==4.0.0
+
+# WebSocket
+websocket-client==1.7.0
+websockets==12.0
+
+# Notifications
+requests==2.31.0        # LINE Notify / Telegram
+
+# Utilities
+python-dotenv==1.0.1    # อ่าน .env file
+schedule==1.2.1         # จัดตารางเวลา
+colorlog==6.8.2         # Log สีสวย
+rich==13.7.0            # Terminal UI สวย
+
+# Database (เก็บ Orders)
+sqlalchemy==2.0.28

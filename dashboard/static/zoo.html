@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS ZOO — Trading Intelligence</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg:       #f5f2ec;
+  --surface:  #ffffff;
+  --map-bg:   #e8edd8;
+  --path:     #d4c9b0;
+  --border:   #e0d9cc;
+  --text:     #2c2a26;
+  --muted:    #9a9080;
+  --gold:     #c8962a;
+  --green:    #4a8c5c;
+  --red:      #b85050;
+  --blue:     #4a72a0;
+  --tag:      #6b8c6e;
+  --r:        12px;
+  --enc:      rgba(255,255,255,0.55);
+  --enc-b:    rgba(0,0,0,0.08);
+}
+
+* { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); font-size:12px; overflow:hidden; }
+
+/* ══ TOP BAR ══════════════════════════════════════ */
+#topbar {
+  height: 48px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 20px; gap: 0;
+}
+.tb-brand {
+  font-weight: 700; font-size: 14px; color: var(--text);
+  letter-spacing: .5px; margin-right: 28px;
+  display: flex; align-items: center; gap: 8px;
+}
+.tb-brand .zoo-icon { font-size: 18px; }
+.tb-sep { width: 1px; height: 20px; background: var(--border); margin: 0 20px; }
+.tb-kv { display: flex; flex-direction: column; gap: 1px; }
+.tb-kv-label { font-size: 9px; color: var(--muted); letter-spacing: .8px; text-transform: uppercase; }
+.tb-kv-val   { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; }
+.tb-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.pill {
+  padding: 4px 12px; border-radius: 20px; font-size: 10px; font-weight: 600;
+  letter-spacing: .5px;
+}
+.pill.live    { background: #e8f5ec; color: var(--green); border: 1px solid #b8ddc4; }
+.pill.offline { background: #f5f0e8; color: var(--muted); border: 1px solid var(--border); }
+.pulse { animation: pulse 2.5s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ══ LAYOUT ════════════════════════════════════════ */
+#layout {
+  display: grid;
+  grid-template-columns: 220px 1fr 220px;
+  grid-template-rows: 1fr 30px;
+  height: calc(100vh - 48px);
+}
+
+/* ══ PANELS ════════════════════════════════════════ */
+.panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow: hidden;
+}
+.panel.right { border-right: none; border-left: 1px solid var(--border); }
+
+.pnl-section { padding: 14px 16px; border-bottom: 1px solid var(--border); }
+.pnl-section:last-child { border-bottom: none; flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.sec-label {
+  font-size: 9px; font-weight: 600; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+}
+
+.big-price { font-family:'JetBrains Mono',monospace; font-size:28px; font-weight:600; color:var(--gold); line-height:1; }
+.price-sub  { font-size:10px; color:var(--muted); margin-top:4px; }
+
+.ind-row { display:flex; justify-content:space-between; align-items:center; padding:5px 0; border-bottom:1px solid rgba(0,0,0,.04); }
+.ind-row:last-child { border-bottom:none; }
+.ind-lbl { font-size:10px; color:var(--muted); }
+.ind-val { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; }
+
+.bar-wrap { margin-bottom:8px; }
+.bar-row  { display:flex; justify-content:space-between; margin-bottom:3px; }
+.bar-name { font-size:10px; color:var(--muted); }
+.bar-pct  { font-size:10px; font-weight:600; }
+.bar-track { height:4px; border-radius:2px; background:rgba(0,0,0,.06); overflow:hidden; }
+.bar-fill  { height:100%; border-radius:2px; transition:width .8s ease; }
+
+.sig-box {
+  border-radius: 8px; padding: 10px 14px; text-align: center; margin-bottom: 10px;
+}
+.sig-box.BUY  { background:#edf7f1; border:1px solid #b8ddc4; }
+.sig-box.SELL { background:#fdf0f0; border:1px solid #e8c0c0; }
+.sig-box.HOLD { background:#fdf8ed; border:1px solid #e0cfaa; }
+.sig-action { font-size:18px; font-weight:700; letter-spacing:3px; }
+.sig-action.BUY  { color:var(--green); }
+.sig-action.SELL { color:var(--red); }
+.sig-action.HOLD { color:var(--gold); }
+.sig-conf { font-size:10px; color:var(--muted); margin-top:3px; }
+
+/* orders */
+.ord-list { flex:1; overflow-y:auto; min-height:0; }
+.ord-list::-webkit-scrollbar { width:2px; }
+.ord-list::-webkit-scrollbar-thumb { background:var(--border); border-radius:1px; }
+.ord-item { display:grid; grid-template-columns:28px 1fr 60px; gap:4px; align-items:center; padding:6px 0; border-bottom:1px solid rgba(0,0,0,.04); font-size:10px; }
+.ord-item:last-child { border-bottom:none; }
+.side-dot { width:20px; height:20px; border-radius:4px; display:flex; align-items:center; justify-content:center; font-size:8px; font-weight:700; }
+.side-dot.buy  { background:#edf7f1; color:var(--green); }
+.side-dot.sell { background:#fdf0f0; color:var(--red); }
+.ord-entry { font-family:'JetBrains Mono',monospace; font-size:10px; }
+.ord-pnl   { font-family:'JetBrains Mono',monospace; font-size:10px; text-align:right; }
+
+/* log */
+.log-box { flex:1; overflow-y:auto; min-height:0; }
+.log-box::-webkit-scrollbar { width:2px; }
+.log-box::-webkit-scrollbar-thumb { background:var(--border); border-radius:1px; }
+.log-item { display:flex; gap:6px; padding:4px 0; border-bottom:1px solid rgba(0,0,0,.03); }
+.log-t { font-family:'JetBrains Mono',monospace; font-size:8px; color:var(--muted); flex-shrink:0; padding-top:2px; }
+.log-m { font-size:9px; line-height:1.5; color:var(--text); }
+
+/* ══ ZOO MAP ═══════════════════════════════════════ */
+#zoo-map {
+  position: relative;
+  background: var(--map-bg);
+  overflow: hidden;
+}
+
+/* path/road */
+.zoo-path {
+  position: absolute;
+  background: var(--path);
+  border-radius: 40px;
+}
+.path-h { height: 28px; }
+.path-v { width: 28px; }
+
+/* enclosure */
+.enclosure {
+  position: absolute;
+  background: var(--enc);
+  border: 1.5px solid var(--enc-b);
+  border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px;
+  transition: box-shadow .3s;
+}
+.enclosure:hover { box-shadow: 0 4px 16px rgba(0,0,0,.1); }
+.enclosure.active {
+  border-color: rgba(74,140,92,.4);
+  box-shadow: 0 0 0 3px rgba(74,140,92,.12);
+}
+
+.animal { font-size: 28px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.15)); }
+.agent-name { font-size: 9px; font-weight: 700; letter-spacing: .5px; color: var(--text); text-transform: uppercase; }
+.agent-role { font-size: 8px; color: var(--muted); }
+
+/* speech bubble */
+.bubble {
+  position: absolute;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 10px;
+  font-size: 9px; line-height: 1.4;
+  color: var(--text);
+  max-width: 130px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.07);
+  pointer-events: none;
+  transition: opacity .4s, transform .4s;
+  z-index: 10;
+}
+.bubble::after {
+  content:'';
+  position:absolute;
+  width:8px; height:8px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  transform:rotate(45deg);
+}
+.bubble.bl::after { bottom:-5px; left:16px; border-top:none; border-left:none; }
+.bubble.br::after { bottom:-5px; right:16px; border-top:none; border-left:none; }
+.bubble.tl::after { top:-5px; left:16px; border-bottom:none; border-right:none; }
+.bubble.tr::after { top:-5px; right:16px; border-bottom:none; border-right:none; }
+
+.bubble .b-sender { font-weight:700; font-size:8px; letter-spacing:.5px; margin-bottom:2px; }
+.bubble .b-msg { color:var(--muted); }
+
+/* connection line */
+.conn-svg { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:5; }
+.conn-line { stroke:#c8b89a; stroke-width:1; stroke-dasharray:4 4; fill:none; opacity:.5; }
+.conn-active { stroke:var(--green); stroke-width:1.5; stroke-dasharray:none; opacity:.8; animation:dash 2s linear infinite; }
+@keyframes dash { to { stroke-dashoffset: -20; } }
+
+/* zoo decor */
+.tree { position:absolute; font-size:20px; opacity:.7; pointer-events:none; }
+.deco { position:absolute; font-size:14px; opacity:.5; pointer-events:none; }
+
+/* price chart mini */
+.mini-chart { width:100%; height:60px; margin-top:6px; }
+canvas.mini-c { width:100%; height:100%; display:block; }
+
+/* ══ STATUS BAR ═══════════════════════════════════ */
+#statusbar {
+  grid-column: 1/-1;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 20px;
+  font-size: 9px; color: var(--muted); letter-spacing: .3px;
+}
+.sb-dot { width:6px; height:6px; border-radius:50%; background:var(--green); display:inline-block; margin-right:4px; }
+.sb-sep { color:var(--border); }
+
+/* color utils */
+.c-gold   { color: var(--gold); }
+.c-green  { color: var(--green); }
+.c-red    { color: var(--red); }
+.c-blue   { color: var(--blue); }
+.c-muted  { color: var(--muted); }
+
+/* position card */
+.pos-mini {
+  border-radius:8px; padding:8px 10px;
+  border:1px solid var(--border); margin-top:4px;
+  font-size:10px;
+}
+.pos-mini.buy-p  { background:#edf7f1; border-color:#b8ddc4; }
+.pos-mini.sell-p { background:#fdf0f0; border-color:#e8c0c0; }
+</style>
+</head>
+<body>
+
+<!-- ══ TOP BAR ══════════════════════════════════════ -->
+<div id="topbar">
+  <div class="tb-brand">
+    <span class="zoo-icon">🦁</span>
+    NEXUS ZOO
+    <span style="font-weight:300;color:var(--muted);font-size:11px">Intelligence</span>
+  </div>
+  <div class="tb-kv">
+    <div class="tb-kv-label">XAUTUSDT</div>
+    <div class="tb-kv-val c-gold" id="tb-price">--</div>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-kv">
+    <div class="tb-kv-label">Signal</div>
+    <div class="tb-kv-val" id="tb-sig" style="color:var(--gold)">--</div>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-kv">
+    <div class="tb-kv-label">RSI</div>
+    <div class="tb-kv-val c-gold" id="tb-rsi">--</div>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-kv">
+    <div class="tb-kv-label">Balance</div>
+    <div class="tb-kv-val c-blue" id="tb-bal">-- USDT</div>
+  </div>
+  <div class="tb-sep"></div>
+  <div class="tb-kv">
+    <div class="tb-kv-label">Uptime</div>
+    <div class="tb-kv-val c-muted" id="tb-up">00:00:00</div>
+  </div>
+  <div class="tb-right">
+    <div class="pill offline" id="conn-pill">● OFFLINE</div>
+  </div>
+</div>
+
+<!-- ══ MAIN LAYOUT ══════════════════════════════════ -->
+<div id="layout">
+
+  <!-- LEFT PANEL -->
+  <div class="panel">
+
+    <div class="pnl-section">
+      <div class="sec-label">ราคาทองคำ</div>
+      <div class="big-price" id="p-price">--</div>
+      <div class="price-sub" id="p-diff">-- USDT</div>
+      <div class="mini-chart"><canvas class="mini-c" id="mini-chart"></canvas></div>
+    </div>
+
+    <div class="pnl-section">
+      <div class="sec-label">AI Signal</div>
+      <div class="sig-box HOLD" id="sig-box">
+        <div class="sig-action HOLD" id="sig-action">HOLD</div>
+        <div class="sig-conf" id="sig-conf">ความมั่นใจ 0%</div>
+      </div>
+      <div style="font-size:9px;color:var(--muted);line-height:1.6" id="sig-reason">รอข้อมูล...</div>
+    </div>
+
+    <div class="pnl-section" style="flex:1;min-height:0;display:flex;flex-direction:column">
+      <div class="sec-label">Indicators</div>
+      <div class="ind-row"><span class="ind-lbl">EMA 9</span><span class="ind-val c-blue" id="i-e9">--</span></div>
+      <div class="ind-row"><span class="ind-lbl">EMA 21</span><span class="ind-val c-muted" id="i-e21">--</span></div>
+      <div class="ind-row"><span class="ind-lbl">RSI (14)</span><span class="ind-val c-gold" id="i-rsi">--</span></div>
+      <div class="ind-row"><span class="ind-lbl">ATR</span><span class="ind-val c-muted" id="i-atr">--</span></div>
+      <div class="ind-row"><span class="ind-lbl">Trend</span><span class="ind-val" id="i-trend">--</span></div>
+      <div class="ind-row"><span class="ind-lbl">SL</span><span class="ind-val c-red" id="i-sl">--</span></div>
+      <div class="ind-row"><span class="ind-lbl">TP</span><span class="ind-val c-green" id="i-tp">--</span></div>
+      <div class="ind-row"><span class="ind-lbl">Cycle</span><span class="ind-val c-muted" id="i-cycle">--</span></div>
+    </div>
+
+  </div>
+
+  <!-- CENTER: ZOO MAP -->
+  <div id="zoo-map">
+
+    <!-- SVG connections -->
+    <svg class="conn-svg" id="conn-svg"></svg>
+
+    <!-- Decorative trees -->
+    <span class="tree" style="top:5%;left:3%">🌳</span>
+    <span class="tree" style="top:5%;left:12%">🌿</span>
+    <span class="tree" style="top:8%;right:8%">🌳</span>
+    <span class="tree" style="top:8%;right:18%">🌿</span>
+    <span class="tree" style="bottom:8%;left:5%">🌳</span>
+    <span class="tree" style="bottom:6%;left:18%">🌿</span>
+    <span class="tree" style="bottom:8%;right:6%">🌳</span>
+    <span class="tree" style="bottom:7%;right:16%">🌿</span>
+    <span class="tree" style="top:45%;left:1%">🌿</span>
+    <span class="tree" style="top:45%;right:1%">🌿</span>
+    <span class="deco" style="top:48%;left:47%">⛲</span>
+
+    <!-- PATH roads -->
+    <div class="zoo-path path-h" style="top:calc(50% - 14px);left:10%;width:80%"></div>
+    <div class="zoo-path path-v" style="left:calc(50% - 14px);top:15%;height:70%"></div>
+    <div class="zoo-path path-h" style="top:calc(25% - 14px);left:18%;width:64%"></div>
+    <div class="zoo-path path-h" style="top:calc(75% - 14px);left:18%;width:64%"></div>
+
+    <!-- ── AGENT 1: LEO the Lion — Alpha Scout (top-left) ── -->
+    <div class="enclosure" id="enc-leo" style="width:120px;height:100px;top:10%;left:8%">
+      <div class="animal">🦁</div>
+      <div class="agent-name">LEO</div>
+      <div class="agent-role">Alpha Scout</div>
+    </div>
+    <div class="bubble tl" id="bub-leo" style="top:6%;left:22%">
+      <div class="b-sender c-gold">LEO · Alpha Scout</div>
+      <div class="b-msg" id="bmsg-leo">สแกนราคา XAUTUSDT...</div>
+    </div>
+
+    <!-- ── AGENT 2: ELI the Elephant — Sigma Quant (top-right) ── -->
+    <div class="enclosure" id="enc-eli" style="width:120px;height:100px;top:10%;right:8%">
+      <div class="animal">🐘</div>
+      <div class="agent-name">ELI</div>
+      <div class="agent-role">Sigma Quant</div>
+    </div>
+    <div class="bubble tr" id="bub-eli" style="top:6%;right:22%">
+      <div class="b-sender c-blue">ELI · Sigma Quant</div>
+      <div class="b-msg" id="bmsg-eli">คำนวณ EMA/RSI...</div>
+    </div>
+
+    <!-- ── AGENT 3: GIGI the Giraffe — Delta Risk (center) ── -->
+    <div class="enclosure" id="enc-gigi" style="width:120px;height:110px;top:calc(50% - 55px);left:calc(50% - 60px)">
+      <div class="animal">🦒</div>
+      <div class="agent-name">GIGI</div>
+      <div class="agent-role">Delta Risk</div>
+    </div>
+    <div class="bubble bl" id="bub-gigi" style="top:calc(50% - 80px);left:calc(50% + 70px)">
+      <div class="b-sender" style="color:var(--tag)">GIGI · Delta Risk</div>
+      <div class="b-msg" id="bmsg-gigi">ตรวจสอบ SL/TP...</div>
+    </div>
+
+    <!-- ── AGENT 4: TORA the Tiger — Omega Exec (bottom-left) ── -->
+    <div class="enclosure" id="enc-tora" style="width:120px;height:100px;bottom:10%;left:8%">
+      <div class="animal">🐯</div>
+      <div class="agent-name">TORA</div>
+      <div class="agent-role">Omega Exec</div>
+    </div>
+    <div class="bubble bl" id="bub-tora" style="bottom:15%;left:22%">
+      <div class="b-sender c-green">TORA · Omega Exec</div>
+      <div class="b-msg" id="bmsg-tora">รอส่ง order...</div>
+    </div>
+
+    <!-- ── AGENT 5: KIKI the Parrot — Gamma Comms (bottom-right) ── -->
+    <div class="enclosure" id="enc-kiki" style="width:120px;height:100px;bottom:10%;right:8%">
+      <div class="animal">🦜</div>
+      <div class="agent-name">KIKI</div>
+      <div class="agent-role">Gamma Comms</div>
+    </div>
+    <div class="bubble br" id="bub-kiki" style="bottom:15%;right:22%">
+      <div class="b-sender c-blue">KIKI · Gamma Comms</div>
+      <div class="b-msg" id="bmsg-kiki">ประสานงานทีม...</div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="panel right">
+
+    <div class="pnl-section">
+      <div class="sec-label">พอร์ตโฟลิโอ</div>
+      <div class="ind-row"><span class="ind-lbl">USDT</span><span class="ind-val c-gold" id="r-usdt">--</span></div>
+      <div class="ind-row"><span class="ind-lbl">XAUT</span><span class="ind-val c-blue" id="r-xaut">--</span></div>
+      <div style="margin-top:10px">
+        <div class="bar-wrap">
+          <div class="bar-row"><span class="bar-name">Exposure</span><span class="bar-pct c-gold" id="r-exp">0%</span></div>
+          <div class="bar-track"><div class="bar-fill" id="bf-exp" style="width:0%;background:var(--gold)"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="pnl-section">
+      <div class="sec-label">Position เปิดอยู่</div>
+      <div id="r-pos"><div style="color:var(--muted);font-size:10px;text-align:center;padding:8px 0">ยังไม่มี</div></div>
+    </div>
+
+    <div class="pnl-section" style="flex:1;min-height:0;display:flex;flex-direction:column">
+      <div class="sec-label" style="display:flex;justify-content:space-between">
+        <span>Orders ล่าสุด</span>
+        <span class="c-muted" id="r-ordcount">0</span>
+      </div>
+      <div class="ord-list" id="r-orders">
+        <div style="color:var(--muted);font-size:10px;text-align:center;padding:12px 0">รอ orders...</div>
+      </div>
+    </div>
+
+    <div class="pnl-section" style="flex:1;min-height:0;display:flex;flex-direction:column">
+      <div class="sec-label">บันทึกกิจกรรม</div>
+      <div class="log-box" id="r-log">
+        <div class="log-item">
+          <div class="log-t">--:--</div>
+          <div class="log-m c-muted">รอเชื่อมต่อ...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- STATUS BAR -->
+  <div id="statusbar">
+    <span><span class="sb-dot pulse" id="sb-dot" style="background:var(--muted)"></span><span id="sb-status">OFFLINE</span></span>
+    <span class="sb-sep">·</span>
+    <span id="sb-time">--:--:--</span>
+    <span class="sb-sep">·</span>
+    <span id="sb-msg">กำลังเชื่อมต่อ...</span>
+    <span style="margin-left:auto" class="sb-sep">·</span>
+    <span>Binance TH</span>
+    <span class="sb-sep">·</span>
+    <span>XAUTUSDT Spot</span>
+    <span class="sb-sep">·</span>
+    <span>EMA 9/21 · RSI 14</span>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  MINI CHART
+// ═══════════════════════════════════════════════════
+const mc = document.getElementById('mini-chart');
+const mctx = mc.getContext('2d');
+let priceHistory = [];
+
+function drawMini(){
+  const W = mc.parentElement.clientWidth;
+  const H = 60;
+  mc.width = W; mc.height = H;
+  if(priceHistory.length < 2) return;
+  mctx.clearRect(0,0,W,H);
+  const data = priceHistory.slice(-W);
+  const mn = Math.min(...data), mx = Math.max(...data), rng = mx-mn||1;
+  const py = v => H - 4 - ((v-mn)/rng)*(H-8);
+  const px = i => (i/(data.length-1))*W;
+  mctx.beginPath();
+  data.forEach((v,i)=>{ i===0?mctx.moveTo(px(i),py(v)):mctx.lineTo(px(i),py(v)); });
+  mctx.lineTo(px(data.length-1),H); mctx.lineTo(0,H); mctx.closePath();
+  const g=mctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,'rgba(200,150,42,.2)'); g.addColorStop(1,'rgba(200,150,42,0)');
+  mctx.fillStyle=g; mctx.fill();
+  mctx.beginPath();
+  data.forEach((v,i)=>{ i===0?mctx.moveTo(px(i),py(v)):mctx.lineTo(px(i),py(v)); });
+  mctx.strokeStyle='rgba(200,150,42,.8)'; mctx.lineWidth=1.5; mctx.lineJoin='round'; mctx.stroke();
+}
+
+// ═══════════════════════════════════════════════════
+//  SVG CONNECTIONS
+// ═══════════════════════════════════════════════════
+function getCenter(el){
+  const map = document.getElementById('zoo-map').getBoundingClientRect();
+  const r   = el.getBoundingClientRect();
+  return { x: r.left - map.left + r.width/2, y: r.top - map.top + r.height/2 };
+}
+
+function drawConnections(activePair){
+  const svg = document.getElementById('conn-svg');
+  svg.innerHTML = '';
+  const pairs = [
+    ['enc-leo','enc-gigi'],
+    ['enc-eli','enc-gigi'],
+    ['enc-gigi','enc-tora'],
+    ['enc-gigi','enc-kiki'],
+    ['enc-leo','enc-eli'],
+    ['enc-tora','enc-kiki'],
+  ];
+  pairs.forEach(([a,b])=>{
+    const ca = getCenter(document.getElementById(a));
+    const cb = getCenter(document.getElementById(b));
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',ca.x); line.setAttribute('y1',ca.y);
+    line.setAttribute('x2',cb.x); line.setAttribute('y2',cb.y);
+    const isActive = activePair && (activePair.includes(a) && activePair.includes(b));
+    line.setAttribute('class', isActive ? 'conn-active' : 'conn-line');
+    svg.appendChild(line);
+  });
+}
+
+// ═══════════════════════════════════════════════════
+//  AGENT MESSAGES
+// ═══════════════════════════════════════════════════
+const agentMessages = {
+  leo: {
+    BUY:  ['พบ signal ขาขึ้น!','EMA crossover ↑','ราคาพุ่งขึ้น — BUY!','Volume สูงผิดปกติ'],
+    SELL: ['พบ signal ขาลง','EMA crossover ↓','แรงขายเข้ามา','ระวัง — SELL signal'],
+    HOLD: ['สแกนราคาต่อเนื่อง...','รอ signal ที่ชัด','ตลาดยังนิ่ง','ดู pattern อยู่...'],
+  },
+  eli: {
+    BUY:  ['RSI oversold แล้ว','EMA9 > EMA21 ✓','โมเดลบอก BUY','ตัวเลขดีมาก!'],
+    SELL: ['RSI overbought','EMA death cross','โมเดลบอก SELL','ระวัง reversal'],
+    HOLD: ['คำนวณ EMA/RSI...','รอ confirmation','ตัวเลขยังก้ำกึ่ง','ประมวลผลอยู่...'],
+  },
+  gigi: {
+    BUY:  ['SL/TP พร้อม ✓','R:R = 1:2.25','ความเสี่ยงในเกณฑ์','อนุมัติ BUY แล้ว'],
+    SELL: ['SL/TP คำนวณแล้ว','ป้องกันพอร์ตไว้','อนุมัติ SELL','ตรวจ exposure OK'],
+    HOLD: ['ตรวจสอบ SL/TP...','คำนวณ R:R ratio','ประเมินความเสี่ยง','รอสัญญาณใหม่'],
+  },
+  tora: {
+    BUY:  ['ส่ง BUY order! 🚀','Order กำลังเข้า','FILLED ✓','เปิด position แล้ว'],
+    SELL: ['ส่ง SELL order! ⚡','Order กำลังออก','FILLED ✓','ปิด position แล้ว'],
+    HOLD: ['รอส่ง order...','standby mode','เตรียมพร้อมตลอด','on standby...'],
+  },
+  kiki: {
+    BUY:  ['แจ้ง BUY ไปแล้ว 📢','ส่ง LINE notify','บอกทีมแล้ว ✓','ประกาศ BUY signal'],
+    SELL: ['แจ้ง SELL ไปแล้ว','ส่ง Telegram','บอกทีมแล้ว ✓','ประกาศ SELL signal'],
+    HOLD: ['ประสานงานทีม...','sync ข้อมูล...','รอส่งข่าว...','ติดตามสถานะ'],
+  },
+};
+
+let currentSignal = 'HOLD';
+let msgTimers = {};
+
+function rotateBubble(agentId, signal){
+  const msgs = agentMessages[agentId]?.[signal] || agentMessages[agentId]?.HOLD || ['...'];
+  let idx = 0;
+  clearInterval(msgTimers[agentId]);
+  document.getElementById('bmsg-'+agentId).textContent = msgs[idx];
+  msgTimers[agentId] = setInterval(()=>{
+    idx = (idx+1) % msgs.length;
+    document.getElementById('bmsg-'+agentId).textContent = msgs[idx];
+  }, 3000 + Math.random()*2000);
+}
+
+function updateBubbles(signal){
+  if(signal === currentSignal) return;
+  currentSignal = signal;
+  ['leo','eli','gigi','tora','kiki'].forEach(a => rotateBubble(a, signal));
+}
+
+// active enclosure highlight
+function setActiveAgent(id){
+  document.querySelectorAll('.enclosure').forEach(e=>e.classList.remove('active'));
+  if(id) document.getElementById('enc-'+id)?.classList.add('active');
+}
+
+let activeAgentCycle = ['leo','eli','gigi','tora','kiki'];
+let activeIdx = 0;
+setInterval(()=>{
+  activeIdx = (activeIdx+1) % activeAgentCycle.length;
+  const id = activeAgentCycle[activeIdx];
+  setActiveAgent(id);
+  const connMap = {
+    leo:  ['enc-leo','enc-eli'],
+    eli:  ['enc-eli','enc-gigi'],
+    gigi: ['enc-gigi','enc-tora'],
+    tora: ['enc-tora','enc-kiki'],
+    kiki: ['enc-kiki','enc-leo'],
+  };
+  drawConnections(connMap[id]);
+}, 2500);
+
+// ═══════════════════════════════════════════════════
+//  FORMAT HELPERS
+// ═══════════════════════════════════════════════════
+function fmt(n,d=2){ return n!=null ? parseFloat(n).toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '--'; }
+function sec2hms(s){
+  return [Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(x=>String(x).padStart(2,'0')).join(':');
+}
+function now(){ return new Date().toLocaleTimeString('th-TH',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+
+// ═══════════════════════════════════════════════════
+//  RENDER POSITION
+// ═══════════════════════════════════════════════════
+function renderPos(pos, price){
+  const el = document.getElementById('r-pos');
+  if(!pos){ el.innerHTML = '<div style="color:var(--muted);font-size:10px;text-align:center;padding:8px 0">ยังไม่มี</div>'; return; }
+  const isUp = pos.side === 'BUY';
+  const pnl  = isUp ? (price - pos.entry)*pos.quantity : (pos.entry - price)*pos.quantity;
+  el.innerHTML = `<div class="pos-mini ${isUp?'buy-p':'sell-p'}">
+    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+      <span style="font-weight:700;color:${isUp?'var(--green)':'var(--red)'}">${pos.side}</span>
+      <span style="font-family:'JetBrains Mono',monospace;font-weight:600;color:${pnl>=0?'var(--green)':'var(--red)'}">
+        ${pnl>=0?'+':''}${pnl.toFixed(4)}
+      </span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px;font-size:9px;color:var(--muted)">
+      <div>เข้า <span style="color:var(--text);font-family:'JetBrains Mono',monospace">${fmt(pos.entry)}</span></div>
+      <div>ปัจจุบัน <span style="color:var(--gold);font-family:'JetBrains Mono',monospace">${fmt(price)}</span></div>
+      <div>SL <span style="color:var(--red);font-family:'JetBrains Mono',monospace">${fmt(pos.sl)}</span></div>
+      <div>TP <span style="color:var(--green);font-family:'JetBrains Mono',monospace">${fmt(pos.tp)}</span></div>
+    </div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════
+//  RENDER ORDERS
+// ═══════════════════════════════════════════════════
+let lastOrdLen = 0;
+function renderOrders(orders){
+  if(!orders || orders.length === lastOrdLen) return;
+  lastOrdLen = orders.length;
+  document.getElementById('r-ordcount').textContent = orders.length;
+  const el = document.getElementById('r-orders');
+  if(!orders.length){ el.innerHTML = '<div style="color:var(--muted);font-size:10px;text-align:center;padding:12px 0">ยังไม่มี orders</div>'; return; }
+  el.innerHTML = [...orders].reverse().map(o=>{
+    const pnl = o.pnl||0;
+    const isOpen = o.status==='OPEN';
+    return `<div class="ord-item">
+      <div class="side-dot ${o.side.toLowerCase()}">${o.side==='BUY'?'B':'S'}</div>
+      <div class="ord-entry">${fmt(o.entry)}</div>
+      <div class="ord-pnl" style="color:${isOpen?'var(--muted)':pnl>=0?'var(--green)':'var(--red)'}">
+        ${isOpen?'OPEN':(pnl>=0?'+':'')+pnl.toFixed(3)}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════
+//  LOG
+// ═══════════════════════════════════════════════════
+function addLog(msg, color=''){
+  const el = document.createElement('div');
+  el.className = 'log-item';
+  el.innerHTML = `<div class="log-t">${now().slice(0,5)}</div><div class="log-m ${color}">${msg}</div>`;
+  const box = document.getElementById('r-log');
+  box.insertBefore(el, box.firstChild);
+  if(box.children.length > 50) box.removeChild(box.lastChild);
+}
+
+// ═══════════════════════════════════════════════════
+//  APPLY STATE
+// ═══════════════════════════════════════════════════
+let prevPrice = 0, prevCycle = 0, prevSig = '';
+function applyState(s){
+  const price = s.price||0;
+  const sig   = s.signal||'HOLD';
+  const conf  = s.confidence||0;
+
+  // topbar
+  document.getElementById('tb-price').textContent = fmt(price);
+  document.getElementById('tb-sig').textContent   = sig;
+  document.getElementById('tb-sig').style.color   = sig==='BUY'?'var(--green)':sig==='SELL'?'var(--red)':'var(--gold)';
+  document.getElementById('tb-rsi').textContent   = s.rsi ? parseFloat(s.rsi).toFixed(1) : '--';
+  document.getElementById('tb-bal').textContent   = fmt(s.balance_usdt||0)+' USDT';
+  document.getElementById('tb-up').textContent    = sec2hms(s.uptime_sec||0);
+
+  // left: price
+  document.getElementById('p-price').textContent = fmt(price);
+  if(prevPrice > 0){
+    const d = price - prevPrice;
+    const el = document.getElementById('p-diff');
+    el.textContent = `${d>=0?'▲ +':'▼ '}${d.toFixed(2)} USDT`;
+    el.style.color = d>=0?'var(--green)':'var(--red)';
+  }
+  if(price) prevPrice = price;
+
+  // signal box
+  document.getElementById('sig-box').className   = `sig-box ${sig}`;
+  document.getElementById('sig-action').textContent = sig;
+  document.getElementById('sig-action').className   = `sig-action ${sig}`;
+  document.getElementById('sig-conf').textContent   = `ความมั่นใจ ${conf}%`;
+  document.getElementById('sig-reason').textContent = s.reason||'--';
+
+  // indicators
+  document.getElementById('i-e9').textContent  = s.ema_fast ? fmt(s.ema_fast) : '--';
+  document.getElementById('i-e21').textContent = s.ema_slow ? fmt(s.ema_slow) : '--';
+  const rsiEl = document.getElementById('i-rsi');
+  rsiEl.textContent = s.rsi ? parseFloat(s.rsi).toFixed(1) : '--';
+  rsiEl.style.color = (s.rsi||50)>65?'var(--red)':(s.rsi||50)<35?'var(--green)':'var(--gold)';
+  document.getElementById('i-atr').textContent   = s.atr ? parseFloat(s.atr).toFixed(4) : '--';
+  const tEl = document.getElementById('i-trend');
+  tEl.textContent = s.trend==='UP'?'▲ ขาขึ้น':s.trend==='DOWN'?'▼ ขาลง':'--';
+  tEl.style.color = s.trend==='UP'?'var(--green)':s.trend==='DOWN'?'var(--red)':'var(--muted)';
+  document.getElementById('i-sl').textContent    = s.sl ? fmt(s.sl) : '--';
+  document.getElementById('i-tp').textContent    = s.tp ? fmt(s.tp) : '--';
+  document.getElementById('i-cycle').textContent = s.cycle||'--';
+
+  // right panel
+  document.getElementById('r-usdt').textContent = fmt(s.balance_usdt||0)+' USDT';
+  document.getElementById('r-xaut').textContent = fmt(s.balance_xaut||0,6)+' XAUT';
+  renderPos(s.open_position, price);
+  renderOrders(s.orders);
+
+  // chart
+  if(s.price_history?.length) priceHistory = s.price_history;
+  else if(price > 0) priceHistory.push(price);
+  drawMini();
+
+  // agent bubbles
+  updateBubbles(sig);
+
+  // log on cycle change
+  if(s.cycle && s.cycle !== prevCycle){
+    prevCycle = s.cycle;
+    addLog(`Cycle #${s.cycle} · ราคา <strong>${fmt(price)}</strong>`, 'c-muted');
+    addLog(`${sig} ${conf}% · ${s.reason||''}`, sig==='BUY'?'c-green':sig==='SELL'?'c-red':'c-gold');
+  }
+
+  // log on signal change
+  if(prevSig && sig !== prevSig){
+    addLog(`Signal เปลี่ยน <strong>${prevSig} → ${sig}</strong>`, 'c-blue');
+  }
+  prevSig = sig;
+
+  // status bar
+  document.getElementById('sb-msg').textContent =
+    `LEO ราคา ${fmt(price)} · ELI RSI ${s.rsi?parseFloat(s.rsi).toFixed(1):'--'} · GIGI SL ${fmt(s.sl)} / TP ${fmt(s.tp)} · TORA รอ order · Cycle #${s.cycle||0}`;
+}
+
+// ═══════════════════════════════════════════════════
+//  SOCKET.IO
+// ═══════════════════════════════════════════════════
+const socket = io();
+
+socket.on('connect', ()=>{
+  document.getElementById('conn-pill').className   = 'pill live';
+  document.getElementById('conn-pill').textContent = '● LIVE';
+  document.getElementById('sb-dot').style.background = 'var(--green)';
+  document.getElementById('sb-status').textContent   = 'LIVE';
+  addLog('เชื่อมต่อ bot สำเร็จ ✓', 'c-green');
+});
+
+socket.on('disconnect', ()=>{
+  document.getElementById('conn-pill').className   = 'pill offline';
+  document.getElementById('conn-pill').textContent = '● OFFLINE';
+  document.getElementById('sb-dot').style.background = 'var(--muted)';
+  document.getElementById('sb-status').textContent   = 'OFFLINE';
+  addLog('ขาดการเชื่อมต่อ', 'c-red');
+});
+
+socket.on('state', applyState);
+
+// ═══════════════════════════════════════════════════
+//  CLOCK + INIT
+// ═══════════════════════════════════════════════════
+setInterval(()=>{
+  document.getElementById('sb-time').textContent = new Date().toLocaleTimeString('th-TH',{hour12:false});
+}, 1000);
+
+window.addEventListener('resize', ()=>{ drawMini(); drawConnections(); });
+
+// init bubbles
+['leo','eli','gigi','tora','kiki'].forEach(a => rotateBubble(a, 'HOLD'));
+
+// draw connections after layout settles
+setTimeout(()=>{ drawConnections(); }, 300);
+</script>
+</body>
+</html>

@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS OFFICE</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:'Inter',sans-serif;background:#1a1a2e;color:#e8e4dc}
+
+/* ── TOP BAR ── */
+#topbar{height:48px;background:#12121e;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;padding:0 20px;gap:0;flex-shrink:0}
+.tb-brand{font-weight:700;font-size:15px;letter-spacing:.5px;margin-right:28px;display:flex;align-items:center;gap:8px;color:#f0e8d0}
+.tb-sep{width:1px;height:20px;background:rgba(255,255,255,.08);margin:0 18px}
+.tb-kv{display:flex;flex-direction:column;gap:1px}
+.tb-label{font-size:9px;color:rgba(255,255,255,.35);letter-spacing:1px;text-transform:uppercase}
+.tb-val{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600}
+.tb-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.pill{padding:4px 12px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.5px}
+.pill-live{background:rgba(74,180,100,.15);color:#4ab464;border:1px solid rgba(74,180,100,.3)}
+.pill-off{background:rgba(255,255,255,.06);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.1)}
+.nav-btn{padding:4px 12px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.5);background:transparent;transition:all .2s}
+.nav-btn:hover{background:rgba(255,255,255,.08);color:#e8e4dc}
+
+/* ── LAYOUT ── */
+#layout{display:flex;height:calc(100vh - 48px - 28px);overflow:hidden}
+#office-wrap{flex:1;position:relative;overflow:hidden;background:#1a1a2e}
+#office-canvas{display:block;width:100%;height:100%}
+
+/* ── SIDE PANEL ── */
+#panel{width:260px;flex-shrink:0;background:#12121e;border-left:1px solid rgba(255,255,255,.07);display:flex;flex-direction:column;overflow:hidden}
+.pcard{padding:14px 16px;border-bottom:1px solid rgba(255,255,255,.05)}
+.pcard:last-child{border-bottom:none;flex:1;min-height:0;display:flex;flex-direction:column}
+.plabel{font-size:9px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:10px}
+.big-price{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:600;color:#f5c842;line-height:1}
+.price-diff{font-size:10px;margin-top:4px}
+.sig-box{border-radius:8px;padding:8px 12px;margin-bottom:8px;text-align:center}
+.sig-box.BUY{background:rgba(74,180,100,.1);border:1px solid rgba(74,180,100,.25)}
+.sig-box.SELL{background:rgba(200,80,80,.1);border:1px solid rgba(200,80,80,.25)}
+.sig-box.HOLD{background:rgba(245,200,66,.08);border:1px solid rgba(245,200,66,.2)}
+.sig-action{font-size:20px;font-weight:700;letter-spacing:3px}
+.sig-action.BUY{color:#4ab464}
+.sig-action.SELL{color:#c85050}
+.sig-action.HOLD{color:#f5c842}
+.sig-conf{font-size:9px;color:rgba(255,255,255,.35);margin-top:2px}
+.sig-reason{font-size:9px;color:rgba(255,255,255,.4);line-height:1.5;margin-top:6px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.row:last-child{border-bottom:none}
+.rlbl{font-size:10px;color:rgba(255,255,255,.35)}
+.rval{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600}
+.mini-chart-wrap{height:54px;margin-top:8px}
+canvas.mini{width:100%;height:100%;display:block}
+.scroll-box{flex:1;overflow-y:auto;min-height:0}
+.scroll-box::-webkit-scrollbar{width:2px}
+.scroll-box::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:1px}
+.ord-row{display:grid;grid-template-columns:24px 1fr 60px;gap:4px;align-items:center;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);font-size:10px}
+.ord-row:last-child{border-bottom:none}
+.side-dot{width:18px;height:18px;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:7px;font-weight:700}
+.side-dot.buy{background:rgba(74,180,100,.15);color:#4ab464}
+.side-dot.sell{background:rgba(200,80,80,.15);color:#c85050}
+.ord-entry{font-family:'JetBrains Mono',monospace}
+.ord-pnl{font-family:'JetBrains Mono',monospace;text-align:right}
+.log-item{display:flex;gap:6px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.log-t{font-family:'JetBrains Mono',monospace;font-size:8px;color:rgba(255,255,255,.25);flex-shrink:0;padding-top:2px}
+.log-m{font-size:9px;line-height:1.5;color:rgba(255,255,255,.55)}
+
+/* ── STATUS BAR ── */
+#statusbar{height:28px;background:#12121e;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:16px;padding:0 20px;font-size:9px;color:rgba(255,255,255,.3);letter-spacing:.3px;flex-shrink:0}
+.sb-dot{width:6px;height:6px;border-radius:50%;display:inline-block;margin-right:4px}
+.sb-sep{color:rgba(255,255,255,.1)}
+
+/* ── CHART MODAL ── */
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px)}
+#modal.open{display:flex}
+.modal-box{background:#12121e;border:1px solid rgba(255,255,255,.1);border-radius:16px;width:min(900px,95vw);height:min(560px,85vh);display:flex;flex-direction:column;overflow:hidden}
+.modal-head{padding:16px 20px;border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-weight:600;font-size:14px;color:#f0e8d0}
+.modal-sub{font-size:10px;color:rgba(255,255,255,.35);margin-top:2px}
+.modal-close{width:28px;height:28px;border-radius:6px;border:1px solid rgba(255,255,255,.1);background:transparent;color:rgba(255,255,255,.5);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.modal-close:hover{background:rgba(255,255,255,.08);color:#e8e4dc}
+.modal-tabs{display:flex;gap:4px;padding:12px 20px 0}
+.mtab{padding:5px 14px;border-radius:6px;font-size:10px;font-weight:600;cursor:pointer;color:rgba(255,255,255,.35);border:1px solid transparent;transition:all .2s}
+.mtab.active{background:rgba(255,255,255,.08);color:#e8e4dc;border-color:rgba(255,255,255,.1)}
+.modal-chart-wrap{flex:1;padding:16px 20px;min-height:0}
+.modal-chart-wrap canvas{width:100%!important;height:100%!important}
+.c-gold{color:#f5c842}.c-green{color:#4ab464}.c-red{color:#c85050}.c-blue{color:#60a5fa}.c-muted{color:rgba(255,255,255,.35)}
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <div class="tb-brand">🏢 NEXUS OFFICE</div>
+  <div class="tb-kv"><div class="tb-label">XAUTUSDT</div><div class="tb-val c-gold" id="tb-price">--</div></div>
+  <div class="tb-sep"></div>
+  <div class="tb-kv"><div class="tb-label">Signal</div><div class="tb-val" id="tb-sig" style="color:#f5c842">--</div></div>
+  <div class="tb-sep"></div>
+  <div class="tb-kv"><div class="tb-label">RSI</div><div class="tb-val c-gold" id="tb-rsi">--</div></div>
+  <div class="tb-sep"></div>
+  <div class="tb-kv"><div class="tb-label">Balance</div><div class="tb-val c-blue" id="tb-bal">--</div></div>
+  <div class="tb-sep"></div>
+  <div class="tb-kv"><div class="tb-label">Uptime</div><div class="tb-val c-muted" id="tb-up">--</div></div>
+  <div class="tb-right">
+    <button class="nav-btn" onclick="location.href='/'">Trading</button>
+    <button class="nav-btn" onclick="location.href='/zoo'">Zoo</button>
+    <div class="pill pill-off" id="conn-pill">● OFFLINE</div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="layout">
+  <div id="office-wrap">
+    <canvas id="office-canvas"></canvas>
+  </div>
+
+  <!-- SIDE PANEL -->
+  <div id="panel">
+    <div class="pcard">
+      <div class="plabel">ราคาทองคำ</div>
+      <div class="big-price" id="p-price">--</div>
+      <div class="price-diff c-muted" id="p-diff">--</div>
+      <div class="mini-chart-wrap"><canvas class="mini" id="mini-c"></canvas></div>
+    </div>
+    <div class="pcard">
+      <div class="plabel">AI Signal</div>
+      <div class="sig-box HOLD" id="sig-box">
+        <div class="sig-action HOLD" id="sig-act">HOLD</div>
+        <div class="sig-conf" id="sig-conf">0%</div>
+      </div>
+      <div class="sig-reason" id="sig-reason">รอข้อมูล...</div>
+    </div>
+    <div class="pcard">
+      <div class="plabel">Indicators</div>
+      <div class="row"><span class="rlbl">EMA 9</span><span class="rval c-blue" id="i-e9">--</span></div>
+      <div class="row"><span class="rlbl">EMA 21</span><span class="rval c-muted" id="i-e21">--</span></div>
+      <div class="row"><span class="rlbl">RSI</span><span class="rval c-gold" id="i-rsi">--</span></div>
+      <div class="row"><span class="rlbl">ATR</span><span class="rval c-muted" id="i-atr">--</span></div>
+      <div class="row"><span class="rlbl">Trend</span><span class="rval" id="i-trend">--</span></div>
+      <div class="row"><span class="rlbl">SL / TP</span><span class="rval"><span class="c-red" id="i-sl">--</span> / <span class="c-green" id="i-tp">--</span></span></div>
+    </div>
+    <div class="pcard">
+      <div class="plabel" style="display:flex;justify-content:space-between"><span>Orders</span><span class="c-muted" id="ord-cnt">0</span></div>
+      <div class="scroll-box" id="ord-list"><div style="padding:10px 0;text-align:center;color:rgba(255,255,255,.25);font-size:10px">รอ orders...</div></div>
+    </div>
+    <div class="pcard" style="flex:1;min-height:0;display:flex;flex-direction:column">
+      <div class="plabel">Log</div>
+      <div class="scroll-box" id="log-box"><div class="log-item"><div class="log-t">--:--</div><div class="log-m">รอเชื่อมต่อ...</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- STATUS BAR -->
+<div id="statusbar">
+  <span><span class="sb-dot" id="sb-dot" style="background:rgba(255,255,255,.2)"></span><span id="sb-st">OFFLINE</span></span>
+  <span class="sb-sep">·</span><span id="sb-time">--:--:--</span>
+  <span class="sb-sep">·</span><span id="sb-msg">กำลังเชื่อมต่อ...</span>
+  <span style="margin-left:auto" class="sb-sep">·</span>
+  <span>คลิกที่จอมอนิเตอร์เพื่อดูกราฟ</span>
+  <span class="sb-sep">·</span><span>Binance TH · XAUTUSDT</span>
+</div>
+
+<!-- CHART MODAL -->
+<div id="modal">
+  <div class="modal-box">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="modal-title">📊 กราฟราคา XAUTUSDT</div>
+        <div class="modal-sub" id="modal-sub">Real-time data from Binance TH</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-tabs">
+      <div class="mtab active" id="tab-price" onclick="switchTab('price')">ราคา + EMA</div>
+      <div class="mtab" id="tab-rsi" onclick="switchTab('rsi')">RSI</div>
+      <div class="mtab" id="tab-combined" onclick="switchTab('combined')">ภาพรวม</div>
+    </div>
+    <div class="modal-chart-wrap">
+      <canvas id="modal-chart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  CANVAS SETUP
+// ═══════════════════════════════════════════════════
+const canvas = document.getElementById('office-canvas');
+const ctx    = canvas.getContext('2d');
+
+let W = 0, H = 0;
+let OX = 0, OY = 0;
+let TW = 80, TH = 40; // tile width/height
+
+const COLS = 9, ROWS = 7;
+const WALL_H_TILES = 4;
+
+function resize() {
+  const wrap = document.getElementById('office-wrap');
+  W = canvas.width  = wrap.clientWidth;
+  H = canvas.height = wrap.clientHeight;
+  // scale tiles to fit room in canvas
+  const needW = (COLS + ROWS) * TW;
+  const needH = (COLS + ROWS) * (TH / 2) + WALL_H_TILES * TH;
+  const scaleW = W * 0.9 / needW;
+  const scaleH = H * 0.85 / needH;
+  const scale  = Math.min(scaleW, scaleH, 1.2);
+  TW = 80 * scale;
+  TH = 40 * scale;
+  OX = W / 2;
+  OY = WALL_H_TILES * TH + 20;
+}
+
+function iso(col, row) {
+  return {
+    x: OX + (col - row) * TW / 2,
+    y: OY + (col + row) * TH / 2
+  };
+}
+
+// ═══════════════════════════════════════════════════
+//  AGENTS CONFIG
+// ═══════════════════════════════════════════════════
+const AGENTS = [
+  { id:'leo',  name:'LEO',  emoji:'🦁', role:'Alpha Scout', col:1,   row:1,   suit:'#2d4a9e', shirt:'#4a6abf' },
+  { id:'eli',  name:'ELI',  emoji:'🐘', role:'Sigma Quant', col:6.5, row:0.5, suit:'#2a6a4a', shirt:'#3a8a5a' },
+  { id:'gigi', name:'GIGI', emoji:'🦒', role:'Delta Risk',  col:3.5, row:3,   suit:'#7a5020', shirt:'#9a7030' },
+  { id:'tora', name:'TORA', emoji:'🐯', role:'Omega Exec',  col:1,   row:5,   suit:'#8e2020', shirt:'#b03030' },
+  { id:'kiki', name:'KIKI', emoji:'🦜', role:'Gamma Comms', col:6.5, row:4.5, suit:'#5a2a8e', shirt:'#7a3aae' },
+];
+
+const AGENT_MAP = {};
+AGENTS.forEach(a => AGENT_MAP[a.id] = a);
+
+// ═══════════════════════════════════════════════════
+//  BUBBLE MESSAGES
+// ═══════════════════════════════════════════════════
+const MSGS = {
+  leo:  { BUY:['พบ signal ขาขึ้น!','EMA crossover ↑','ราคาพุ่งขึ้น!'], SELL:['พบ signal ขาลง','EMA cross ↓','แรงขายเข้า'], HOLD:['สแกนราคา...','ตรวจ pattern...','รอ signal...'] },
+  eli:  { BUY:['RSI oversold ✓','คำนวณ BUY ✓','EMA9>EMA21'], SELL:['RSI overbought','คำนวณ SELL ✓','SELL signal'], HOLD:['คำนวณ EMA...','ประมวล RSI...','รอ confirm...'] },
+  gigi: { BUY:['SL/TP พร้อม ✓','R:R = 1:2.25','อนุมัติ BUY'], SELL:['SL/TP คำนวณ','ป้องกันพอร์ต','อนุมัติ SELL'], HOLD:['ตรวจ SL/TP...','คำนวณ R:R...','ประเมินเสี่ยง...'] },
+  tora: { BUY:['ส่ง BUY! 🚀','Order เข้า!','FILLED ✓'], SELL:['ส่ง SELL! ⚡','Order ออก!','FILLED ✓'], HOLD:['standby...','รอ order...','เตรียมพร้อม'] },
+  kiki: { BUY:['แจ้ง BUY แล้ว','LINE notify ✓','บอกทีมแล้ว'], SELL:['แจ้ง SELL แล้ว','Telegram ✓','บอกทีมแล้ว'], HOLD:['sync ข้อมูล...','ติดตาม...','ประสาน...'] },
+};
+
+let bubbleState = {};
+let msgTimers   = {};
+let currentSig  = 'HOLD';
+
+function startBubble(agentId, sig) {
+  const msgs = MSGS[agentId]?.[sig] || MSGS[agentId]?.HOLD;
+  let i = 0;
+  bubbleState[agentId] = msgs[i];
+  clearInterval(msgTimers[agentId]);
+  msgTimers[agentId] = setInterval(() => {
+    i = (i + 1) % msgs.length;
+    bubbleState[agentId] = msgs[i];
+  }, 2800 + Math.random() * 2000);
+}
+
+function updateBubbles(sig) {
+  if (sig === currentSig) return;
+  currentSig = sig;
+  AGENTS.forEach(a => startBubble(a.id, sig));
+}
+
+// init
+AGENTS.forEach(a => startBubble(a.id, 'HOLD'));
+
+// ═══════════════════════════════════════════════════
+//  DRAWING HELPERS
+// ═══════════════════════════════════════════════════
+function poly(pts, fill, stroke, lineW = 1) {
+  ctx.beginPath();
+  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+  ctx.closePath();
+  if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+  if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lineW; ctx.stroke(); }
+}
+
+function isoBox(col, row, deskW, deskD, boxH, topColor, frontColor, rightColor) {
+  const p00 = iso(col, row);
+  const p10 = iso(col + deskW, row);
+  const p11 = iso(col + deskW, row + deskD);
+  const p01 = iso(col, row + deskD);
+  const down = h => ({ x: 0, y: h });
+  const shift = (p, d) => ({ x: p.x + d.x, y: p.y + d.y });
+
+  // top face
+  poly([p00, p10, p11, p01], topColor, 'rgba(0,0,0,.15)', .5);
+  // front face (visible, towards viewer = bottom-left)
+  poly([p01, p11, shift(p11, down(boxH)), shift(p01, down(boxH))], frontColor, 'rgba(0,0,0,.1)', .5);
+  // right face (towards viewer = bottom-right)
+  poly([p10, p11, shift(p11, down(boxH)), shift(p10, down(boxH))], rightColor, 'rgba(0,0,0,.1)', .5);
+}
+
+// ═══════════════════════════════════════════════════
+//  ROOM DRAWING
+// ═══════════════════════════════════════════════════
+function drawRoom() {
+  const wallH = WALL_H_TILES * TH;
+
+  // Back wall (along row = 0)
+  for (let c = 0; c < COLS; c++) {
+    const p0 = iso(c, 0), p1 = iso(c + 1, 0);
+    const shade = (c % 2 === 0) ? '#1e2235' : '#1c2030';
+    poly(
+      [p0, p1, { x: p1.x, y: p1.y - wallH }, { x: p0.x, y: p0.y - wallH }],
+      shade, 'rgba(255,255,255,.04)', .5
+    );
+    // window every 3 tiles
+    if (c === 2 || c === 6) {
+      const mx = (p0.x + p1.x) / 2;
+      const wy = p0.y - wallH * 0.7;
+      const ww = TW * 0.55, wh = wallH * 0.4;
+      // window frame
+      ctx.fillStyle = '#0a1628';
+      ctx.beginPath(); ctx.roundRect(mx - ww/2, wy, ww, wh, 3); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,.15)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.roundRect(mx - ww/2, wy, ww, wh, 3); ctx.stroke();
+      // window light
+      const wg = ctx.createLinearGradient(mx - ww/2, wy, mx + ww/2, wy + wh);
+      wg.addColorStop(0, 'rgba(100,160,255,.12)');
+      wg.addColorStop(1, 'rgba(60,100,200,.05)');
+      ctx.fillStyle = wg;
+      ctx.beginPath(); ctx.roundRect(mx - ww/2 + 2, wy + 2, ww - 4, wh - 4, 2); ctx.fill();
+      // cross bars
+      ctx.strokeStyle = 'rgba(255,255,255,.1)'; ctx.lineWidth = .8;
+      ctx.beginPath(); ctx.moveTo(mx, wy); ctx.lineTo(mx, wy + wh); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(mx - ww/2, wy + wh/2); ctx.lineTo(mx + ww/2, wy + wh/2); ctx.stroke();
+    }
+  }
+
+  // Left wall (along col = 0)
+  for (let r = 0; r < ROWS; r++) {
+    const p0 = iso(0, r), p1 = iso(0, r + 1);
+    const shade = (r % 2 === 0) ? '#1c1e30' : '#1a1c2e';
+    poly(
+      [p0, p1, { x: p1.x, y: p1.y - wallH }, { x: p0.x, y: p0.y - wallH }],
+      shade, 'rgba(255,255,255,.04)', .5
+    );
+    // shelf on left wall
+    if (r === 2 || r === 4) {
+      const mx = (p0.x + p1.x) / 2;
+      const sy = p0.y - wallH * 0.35;
+      ctx.fillStyle = '#3a2e20'; ctx.fillRect(mx - TW * .3, sy, TW * .6, 6);
+      ctx.fillStyle = '#2a2014'; ctx.fillRect(mx - TW * .3, sy + 6, TW * .6, 3);
+      // books
+      const books = [
+        { x: mx - TW * .25, c: '#c85050' },
+        { x: mx - TW * .12, c: '#4a6abf' },
+        { x: mx + TW * .01, c: '#4a9e60' },
+        { x: mx + TW * .12, c: '#c8a030' },
+      ];
+      books.forEach(b => {
+        ctx.fillStyle = b.c;
+        ctx.fillRect(b.x, sy - 18, TW * .1, 18);
+        ctx.fillStyle = 'rgba(255,255,255,.15)';
+        ctx.fillRect(b.x + 1, sy - 17, TW * .06, 2);
+      });
+    }
+  }
+
+  // Wall corner accent (where walls meet at col=0, row=0)
+  {
+    const p = iso(0, 0);
+    ctx.strokeStyle = 'rgba(255,255,255,.08)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(p.x, p.y - wallH); ctx.lineTo(p.x, p.y); ctx.stroke();
+  }
+
+  // Floor tiles
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const p00 = iso(c, r), p10 = iso(c+1, r), p11 = iso(c+1, r+1), p01 = iso(c, r+1);
+      const isLight = (c + r) % 2 === 0;
+      const fill = isLight ? '#1e2240' : '#1a1e38';
+      poly([p00, p10, p11, p01], fill, 'rgba(255,255,255,.04)', .4);
+    }
+  }
+
+  // Floor ambient light circle
+  const floorCenter = iso(COLS/2, ROWS/2);
+  const grad = ctx.createRadialGradient(floorCenter.x, floorCenter.y, 0, floorCenter.x, floorCenter.y, TW * 3);
+  grad.addColorStop(0, 'rgba(100,120,255,.06)');
+  grad.addColorStop(1, 'rgba(100,120,255,0)');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, OY, W, H - OY);
+}
+
+// ═══════════════════════════════════════════════════
+//  FURNITURE
+// ═══════════════════════════════════════════════════
+let monitorAreas = []; // for click detection
+
+function drawDesk(agent) {
+  const { col, row, suit } = agent;
+  const dW = 1.8, dD = 1.2, dH = TH * 0.55;
+  // Desk box: anchor is back-right corner
+  isoBox(col - 0.2, row - 0.1, dW, dD, dH, '#3a2e1e', '#2a2010', '#302618');
+
+  // Desk items (pen holder, papers)
+  const deskCenter = iso(col + 0.7, row + 0.5);
+  ctx.fillStyle = '#4a3a28';
+  ctx.fillRect(deskCenter.x - 4, deskCenter.y - dH - 10, 8, 10);
+  ctx.fillStyle = '#f5f0e8'; ctx.globalAlpha = .7;
+  ctx.fillRect(deskCenter.x - 10, deskCenter.y - dH - 2, 14, 8);
+  ctx.globalAlpha = 1;
+
+  // Monitor
+  drawMonitor(agent, col + 0.4, row + 0.2, dH);
+
+  // Chair (behind the agent)
+  const chairPos = iso(col + 0.8, row + dD + 0.15);
+  const chairH = TH * 0.4;
+  // seat
+  poly([
+    iso(col + 0.5, row + dD + 0.1),
+    iso(col + 1.1, row + dD + 0.1),
+    iso(col + 1.1, row + dD + 0.7),
+    iso(col + 0.5, row + dD + 0.7),
+  ], '#2a2a3a', 'rgba(255,255,255,.06)', .4);
+  // seat front
+  const sFR = iso(col + 1.1, row + dD + 0.7);
+  const sFL = iso(col + 0.5, row + dD + 0.7);
+  poly([sFL, sFR, {x:sFR.x, y:sFR.y+chairH*.6}, {x:sFL.x, y:sFL.y+chairH*.6}], '#1e1e2e', null);
+  // backrest
+  const bBL = iso(col + 0.5, row + dD + 0.1);
+  const bBR = iso(col + 1.1, row + dD + 0.1);
+  poly([bBL, bBR, {x:bBR.x, y:bBR.y-chairH*1.2}, {x:bBL.x, y:bBL.y-chairH*1.2}], '#2e2e42', 'rgba(255,255,255,.04)', .4);
+}
+
+function drawMonitor(agent, col, row, deskH) {
+  const pos = iso(col, row);
+  const mW = TW * 0.75, mH = TH * 1.4;
+  const mx = pos.x - mW / 2;
+  const my = pos.y - deskH - mH - 4;
+
+  // Monitor frame
+  ctx.fillStyle = '#1e1e28';
+  ctx.beginPath(); ctx.roundRect(mx - 3, my - 3, mW + 6, mH + 6, 4); ctx.fill();
+
+  // Screen
+  ctx.fillStyle = '#080e1a';
+  ctx.beginPath(); ctx.roundRect(mx, my, mW, mH, 2); ctx.fill();
+
+  // Draw mini chart on screen
+  drawScreenChart(ctx, mx + 2, my + 2, mW - 4, mH - 4);
+
+  // Monitor glow
+  const glow = ctx.createRadialGradient(mx + mW/2, my + mH/2, 0, mx + mW/2, my + mH/2, mW);
+  glow.addColorStop(0, 'rgba(80,120,255,.1)');
+  glow.addColorStop(1, 'rgba(80,120,255,0)');
+  ctx.fillStyle = glow; ctx.fillRect(mx - mW, my - mH, mW*3, mH*3);
+
+  // Stand
+  ctx.fillStyle = '#252530';
+  ctx.fillRect(mx + mW/2 - 3, my + mH, 6, 10);
+  ctx.fillRect(mx + mW/2 - 10, my + mH + 10, 20, 3);
+
+  // Agent name on screen bottom
+  ctx.fillStyle = 'rgba(100,180,255,.7)';
+  ctx.font = `bold ${Math.max(7, TW * .09)}px JetBrains Mono, monospace`;
+  ctx.textAlign = 'center';
+  ctx.fillText(agent.name, mx + mW / 2, my + mH - 6);
+
+  // Store click area
+  monitorAreas.push({ x: mx, y: my, w: mW, h: mH, agentId: agent.id, agentName: agent.name });
+}
+
+function drawScreenChart(ctx, x, y, w, h) {
+  if (priceHistory.length < 2) {
+    ctx.fillStyle = 'rgba(100,180,255,.2)';
+    ctx.fillText('...', x + w/2, y + h/2);
+    return;
+  }
+  const data = priceHistory.slice(-Math.floor(w / 2));
+  const mn = Math.min(...data), mx = Math.max(...data), rng = mx - mn || 1;
+  const py = v => y + h - 2 - ((v - mn) / rng) * (h - 4);
+  const px = i => x + (i / (data.length - 1)) * w;
+
+  ctx.beginPath();
+  data.forEach((v, i) => i === 0 ? ctx.moveTo(px(i), py(v)) : ctx.lineTo(px(i), py(v)));
+  ctx.lineTo(px(data.length - 1), y + h);
+  ctx.lineTo(x, y + h);
+  ctx.closePath();
+  const ag = ctx.createLinearGradient(0, y, 0, y + h);
+  ag.addColorStop(0, 'rgba(245,200,66,.25)');
+  ag.addColorStop(1, 'rgba(245,200,66,0)');
+  ctx.fillStyle = ag; ctx.fill();
+
+  ctx.beginPath();
+  data.forEach((v, i) => i === 0 ? ctx.moveTo(px(i), py(v)) : ctx.lineTo(px(i), py(v)));
+  ctx.strokeStyle = 'rgba(245,200,66,.8)'; ctx.lineWidth = 1; ctx.lineJoin = 'round'; ctx.stroke();
+}
+
+// ═══════════════════════════════════════════════════
+//  CHARACTERS
+// ═══════════════════════════════════════════════════
+let animTick = 0;
+let activeAgent = 0;
+
+function drawChar(agent) {
+  const { col, row, emoji, suit, shirt, id } = agent;
+  const pos  = iso(col + 0.8, row + 1.1);
+  const px   = pos.x;
+  const py   = pos.y;
+  const isActive = AGENTS[activeAgent].id === id;
+  const bob  = isActive ? Math.sin(animTick * .05) * 3 : 0;
+
+  ctx.save();
+  // Shadow
+  ctx.globalAlpha = .2;
+  ctx.fillStyle = '#000';
+  ctx.beginPath(); ctx.ellipse(px, py + 2, 14, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  const cy = py - 8 + bob; // base feet at cy
+
+  // Legs
+  ctx.fillStyle = '#1a1a2a';
+  // left leg
+  ctx.beginPath(); ctx.roundRect(px - 8, cy - 20, 7, 20, 3); ctx.fill();
+  // right leg
+  ctx.beginPath(); ctx.roundRect(px + 1, cy - 20, 7, 20, 3); ctx.fill();
+  // shoes
+  ctx.fillStyle = '#0a0a14';
+  ctx.beginPath(); ctx.roundRect(px - 10, cy - 5, 10, 6, 2); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(px, cy - 5, 10, 6, 2); ctx.fill();
+
+  // Jacket/suit body
+  const jGrad = ctx.createLinearGradient(px - 13, cy - 50, px + 13, cy - 50);
+  jGrad.addColorStop(0, shirt);
+  jGrad.addColorStop(1, suit);
+  ctx.fillStyle = jGrad;
+  ctx.beginPath(); ctx.roundRect(px - 13, cy - 52, 26, 32, 5); ctx.fill();
+
+  // Shirt & tie
+  ctx.fillStyle = '#e8e4f0';
+  ctx.beginPath(); ctx.roundRect(px - 4, cy - 50, 8, 24, 2); ctx.fill();
+  // Tie
+  ctx.fillStyle = suit;
+  ctx.beginPath();
+  ctx.moveTo(px - 2, cy - 48);
+  ctx.lineTo(px + 2, cy - 48);
+  ctx.lineTo(px + 3, cy - 28);
+  ctx.lineTo(px, cy - 24);
+  ctx.lineTo(px - 3, cy - 28);
+  ctx.closePath(); ctx.fill();
+
+  // Arms
+  ctx.fillStyle = suit;
+  ctx.beginPath(); ctx.roundRect(px - 18, cy - 50, 6, 22, 3); ctx.fill(); // left
+  ctx.beginPath(); ctx.roundRect(px + 12, cy - 50, 6, 22, 3); ctx.fill(); // right
+  // Hands
+  ctx.fillStyle = '#d4c0a0';
+  ctx.beginPath(); ctx.arc(px - 15, cy - 28, 4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(px + 15, cy - 28, 4, 0, Math.PI * 2); ctx.fill();
+
+  // Head glow if active
+  if (isActive) {
+    ctx.fillStyle = 'rgba(255,220,80,.15)';
+    ctx.beginPath(); ctx.arc(px, cy - 65, 22, 0, Math.PI * 2); ctx.fill();
+  }
+
+  // Head circle
+  const headGrad = ctx.createRadialGradient(px - 5, cy - 72, 2, px, cy - 65, 18);
+  headGrad.addColorStop(0, '#f5e8d0');
+  headGrad.addColorStop(1, '#e0c8a8');
+  ctx.fillStyle = headGrad;
+  ctx.shadowColor = 'rgba(0,0,0,.3)';
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 3;
+  ctx.beginPath(); ctx.arc(px, cy - 65, 18, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+  // Emoji head
+  ctx.font = `${Math.max(16, TW * .25)}px serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, px, cy - 65);
+
+  // Name tag
+  ctx.font = `bold ${Math.max(8, TW * .12)}px Inter, sans-serif`;
+  ctx.fillStyle = '#e8e4dc';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  ctx.fillText(agent.name, px, cy + 5);
+  ctx.font = `${Math.max(7, TW * .1)}px Inter, sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,.4)';
+  ctx.fillText(agent.role, px, cy + 5 + Math.max(9, TW * .13));
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════
+//  SPEECH BUBBLES
+// ═══════════════════════════════════════════════════
+function drawBubble(agent) {
+  const { col, row, id } = agent;
+  const pos = iso(col + 0.8, row + 1.1);
+  const px  = pos.x;
+  const py  = pos.y - 8;
+  const text = bubbleState[id] || '...';
+  const bx   = px - 55;
+  const by   = py - 120;
+  const bw   = 110;
+  const bh   = 32;
+
+  ctx.save();
+  // Bubble bg
+  ctx.fillStyle = 'rgba(12, 14, 28, 0.92)';
+  ctx.strokeStyle = 'rgba(255,255,255,.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 8); ctx.fill(); ctx.stroke();
+
+  // Tail
+  ctx.fillStyle = 'rgba(12, 14, 28, 0.92)';
+  ctx.beginPath();
+  ctx.moveTo(px - 4, by + bh);
+  ctx.lineTo(px + 4, by + bh);
+  ctx.lineTo(px, by + bh + 10);
+  ctx.closePath(); ctx.fill();
+
+  // Agent name in bubble
+  ctx.font = `bold ${Math.max(7, TW * .1)}px Inter, sans-serif`;
+  ctx.fillStyle = agentColor(id);
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(agent.name, bx + 8, by + 5);
+
+  // Message
+  ctx.font = `${Math.max(7, TW * .1)}px Inter, sans-serif`;
+  ctx.fillStyle = 'rgba(232,228,220,.7)';
+  ctx.fillText(text, bx + 8, by + 17);
+
+  ctx.restore();
+}
+
+function agentColor(id) {
+  const colors = { leo:'#f5c842', eli:'#4ab464', gigi:'#c8a040', tora:'#f08060', kiki:'#a878f0' };
+  return colors[id] || '#ffffff';
+}
+
+// ═══════════════════════════════════════════════════
+//  DECORATIONS
+// ═══════════════════════════════════════════════════
+function drawDecorations() {
+  // Plant in corner (col=8, row=0.5 area)
+  drawPlant(iso(8.3, 0.6));
+  // Plant other side (col=0.3, row=6)
+  drawPlant(iso(0.4, 6.2));
+  // Whiteboard on back wall
+  drawWhiteboard();
+}
+
+function drawPlant(pos) {
+  // Pot
+  ctx.fillStyle = '#5a3820';
+  ctx.beginPath(); ctx.roundRect(pos.x - 10, pos.y - 20, 20, 20, 3); ctx.fill();
+  ctx.fillStyle = '#3a2810';
+  ctx.fillRect(pos.x - 10, pos.y - 22, 20, 4);
+  // Leaves
+  const leafPositions = [
+    [pos.x, pos.y - 40, 14],
+    [pos.x - 12, pos.y - 34, 10],
+    [pos.x + 12, pos.y - 34, 10],
+    [pos.x - 6, pos.y - 52, 11],
+    [pos.x + 6, pos.y - 52, 11],
+  ];
+  leafPositions.forEach(([lx, ly, lr]) => {
+    ctx.fillStyle = '#2a6a30';
+    ctx.beginPath(); ctx.arc(lx, ly, lr, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#3a8a40';
+    ctx.beginPath(); ctx.arc(lx - 2, ly - 2, lr * .6, 0, Math.PI * 2); ctx.fill();
+  });
+}
+
+function drawWhiteboard() {
+  // Position: back wall center between col 3-6 at row 0
+  const wL = iso(3.5, 0);
+  const wR = iso(5.5, 0);
+  const wallH = WALL_H_TILES * TH;
+  const wTop  = wallH * 0.15;
+  const wBot  = wallH * 0.65;
+  const bL = { x: wL.x, y: wL.y - wTop };
+  const bR = { x: wR.x, y: wR.y - wTop };
+  const bRB = { x: wR.x, y: wR.y - wBot * .8 };
+  const bLB = { x: wL.x, y: wL.y - wBot * .8 };
+
+  // Frame
+  ctx.fillStyle = '#2a2040';
+  poly([bL, bR, bRB, bLB], '#2a2040', 'rgba(255,255,255,.1)', 1);
+
+  // Screen content
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(bL.x + 2, bL.y + 2);
+  ctx.lineTo(bR.x - 2, bR.y + 2);
+  ctx.lineTo(bRB.x - 2, bRB.y - 2);
+  ctx.lineTo(bLB.x + 2, bLB.y - 2);
+  ctx.closePath(); ctx.clip();
+
+  const bCx = (bL.x + bR.x) / 2;
+  const bCy = (bL.y + bLB.y) / 2;
+
+  // Price display on whiteboard
+  ctx.fillStyle = '#050810';
+  ctx.fillRect(bL.x, bL.y, bR.x - bL.x, bLB.y - bL.y);
+
+  ctx.font = `bold ${Math.max(10, TW * .14)}px JetBrains Mono, monospace`;
+  ctx.fillStyle = '#f5c842';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const priceStr = priceHistory.length > 0 ? priceHistory[priceHistory.length - 1].toFixed(2) : '--';
+  ctx.fillText(priceStr, bCx, bCy - 10);
+
+  ctx.font = `${Math.max(8, TW * .1)}px Inter, sans-serif`;
+  ctx.fillStyle = 'rgba(255,255,255,.4)';
+  ctx.fillText('XAUTUSDT', bCx, bCy + 12);
+
+  const sig = currentSig;
+  ctx.font = `bold ${Math.max(9, TW * .12)}px Inter, sans-serif`;
+  ctx.fillStyle = sig === 'BUY' ? '#4ab464' : sig === 'SELL' ? '#c85050' : '#f5c842';
+  ctx.fillText(sig, bCx, bCy + 28);
+
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════
+//  MINI CHART (PANEL)
+// ═══════════════════════════════════════════════════
+const mc = document.getElementById('mini-c');
+const mctx = mc.getContext('2d');
+let priceHistory = [];
+let rsiHistory   = [];
+
+function drawMiniPanel() {
+  const pw = mc.parentElement.clientWidth;
+  mc.width = pw; mc.height = 54;
+  if (priceHistory.length < 2) return;
+  const data = priceHistory.slice(-pw);
+  const mn = Math.min(...data), mx = Math.max(...data), rng = mx - mn || 1;
+  const py = v => 52 - ((v - mn) / rng) * 48;
+  const px = i => (i / (data.length - 1)) * pw;
+  mctx.clearRect(0, 0, pw, 54);
+  mctx.beginPath();
+  data.forEach((v, i) => i === 0 ? mctx.moveTo(px(i), py(v)) : mctx.lineTo(px(i), py(v)));
+  mctx.lineTo(px(data.length - 1), 54); mctx.lineTo(0, 54); mctx.closePath();
+  const g = mctx.createLinearGradient(0, 0, 0, 54);
+  g.addColorStop(0, 'rgba(245,200,66,.2)'); g.addColorStop(1, 'rgba(245,200,66,0)');
+  mctx.fillStyle = g; mctx.fill();
+  mctx.beginPath();
+  data.forEach((v, i) => i === 0 ? mctx.moveTo(px(i), py(v)) : mctx.lineTo(px(i), py(v)));
+  mctx.strokeStyle = 'rgba(245,200,66,.8)'; mctx.lineWidth = 1.5; mctx.lineJoin = 'round'; mctx.stroke();
+}
+
+// ═══════════════════════════════════════════════════
+//  MAIN RENDER LOOP
+// ═══════════════════════════════════════════════════
+function render() {
+  animTick++;
+  if (animTick % 180 === 0) activeAgent = (activeAgent + 1) % AGENTS.length;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Ambient background
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#10121e'); bg.addColorStop(1, '#161828');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+
+  monitorAreas = [];
+
+  drawRoom();
+  drawDecorations();
+
+  // Sort agents by depth for proper layering
+  const sorted = [...AGENTS].sort((a, b) => (a.col + a.row) - (b.col + b.row));
+  sorted.forEach(a => {
+    drawDesk(a);
+    drawChar(a);
+    drawBubble(a);
+  });
+
+  drawMiniPanel();
+  requestAnimationFrame(render);
+}
+
+// ═══════════════════════════════════════════════════
+//  CLICK HANDLER (open chart modal)
+// ═══════════════════════════════════════════════════
+canvas.addEventListener('click', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  for (const area of monitorAreas) {
+    if (mx >= area.x && mx <= area.x + area.w && my >= area.y && my <= area.y + area.h) {
+      openModal(area.agentId, area.agentName);
+      return;
+    }
+  }
+});
+
+canvas.style.cursor = 'default';
+canvas.addEventListener('mousemove', e => {
+  const rect = canvas.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+  const hit = monitorAreas.some(a => mx >= a.x && mx <= a.x + a.w && my >= a.y && my <= a.y + a.h);
+  canvas.style.cursor = hit ? 'pointer' : 'default';
+});
+
+// ═══════════════════════════════════════════════════
+//  CHART MODAL
+// ═══════════════════════════════════════════════════
+let modalChart = null;
+let currentTab = 'price';
+let currentAgentId = null;
+
+function openModal(agentId, agentName) {
+  currentAgentId = agentId;
+  document.getElementById('modal-title').textContent = `📊 ${AGENT_MAP[agentId]?.emoji || ''} ${agentName} — กราฟข้อมูล`;
+  document.getElementById('modal').classList.add('open');
+  switchTab('price');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  if (modalChart) { modalChart.destroy(); modalChart = null; }
+}
+
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) closeModal();
+});
+
+function switchTab(tab) {
+  currentTab = tab;
+  ['price','rsi','combined'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t === tab);
+  });
+  buildChart(tab);
+}
+
+function buildChart(tab) {
+  if (modalChart) { modalChart.destroy(); modalChart = null; }
+  const canvas = document.getElementById('modal-chart');
+  const labels = priceHistory.map((_, i) => i);
+
+  const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 400 },
+    plugins: { legend: { labels: { color: 'rgba(255,255,255,.5)', font: { size: 11 } } } },
+    scales: {
+      x: { ticks: { color: 'rgba(255,255,255,.3)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,.05)' } },
+      y: { ticks: { color: 'rgba(255,255,255,.4)', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,.05)' } },
+    }
+  };
+
+  if (tab === 'price') {
+    // EMA approximation from price history
+    const ema9  = calcEMA(priceHistory, 9);
+    const ema21 = calcEMA(priceHistory, 21);
+    modalChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'ราคา XAUTUSDT', data: priceHistory, borderColor: '#f5c842', backgroundColor: 'rgba(245,200,66,.08)', borderWidth: 2, pointRadius: 0, fill: true, tension: .3 },
+          { label: 'EMA 9',  data: ema9,  borderColor: '#60a5fa', borderWidth: 1.5, pointRadius: 0, fill: false, tension: .4 },
+          { label: 'EMA 21', data: ema21, borderColor: '#a78bfa', borderWidth: 1.5, pointRadius: 0, fill: false, tension: .4, borderDash: [4,2] },
+        ]
+      },
+      options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, tooltip: { mode: 'index', intersect: false } } }
+    });
+
+  } else if (tab === 'rsi') {
+    modalChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: labels.slice(-rsiHistory.length),
+        datasets: [
+          { label: 'RSI (14)', data: rsiHistory, borderColor: '#f5c842', backgroundColor: 'rgba(245,200,66,.05)', borderWidth: 2, pointRadius: 0, fill: true, tension: .4 },
+          { label: 'Overbought (65)', data: new Array(rsiHistory.length).fill(65), borderColor: 'rgba(200,80,80,.5)', borderWidth: 1, pointRadius: 0, fill: false, borderDash: [6,3] },
+          { label: 'Oversold (35)',   data: new Array(rsiHistory.length).fill(35), borderColor: 'rgba(74,180,100,.5)', borderWidth: 1, pointRadius: 0, fill: false, borderDash: [6,3] },
+        ]
+      },
+      options: {
+        ...chartDefaults,
+        scales: {
+          ...chartDefaults.scales,
+          y: { ...chartDefaults.scales.y, min: 0, max: 100 }
+        }
+      }
+    });
+
+  } else if (tab === 'combined') {
+    modalChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          { label: 'ราคา', data: priceHistory, borderColor: '#f5c842', borderWidth: 2, pointRadius: 0, fill: false, tension: .3, yAxisID: 'y' },
+          { label: 'RSI',  data: rsiHistory.slice(-priceHistory.length), borderColor: '#a78bfa', borderWidth: 1.5, pointRadius: 0, fill: false, tension: .4, yAxisID: 'y2', borderDash: [3,2] },
+        ]
+      },
+      options: {
+        ...chartDefaults,
+        scales: {
+          x: chartDefaults.scales.x,
+          y:  { ...chartDefaults.scales.y, position: 'left' },
+          y2: { ...chartDefaults.scales.y, position: 'right', min: 0, max: 100, grid: { drawOnChartArea: false } },
+        }
+      }
+    });
+  }
+}
+
+function calcEMA(data, period) {
+  if (data.length < period) return [];
+  const k    = 2 / (period + 1);
+  let ema    = data.slice(0, period).reduce((a, b) => a + b, 0) / period;
+  const result = new Array(period - 1).fill(null);
+  result.push(ema);
+  for (let i = period; i < data.length; i++) {
+    ema = data[i] * k + ema * (1 - k);
+    result.push(ema);
+  }
+  return result;
+}
+
+// ═══════════════════════════════════════════════════
+//  PANEL HELPERS
+// ═══════════════════════════════════════════════════
+function fmt(n, d = 2) { return n != null ? parseFloat(n).toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '--'; }
+function sec2hms(s) { return [Math.floor(s/3600),Math.floor((s%3600)/60),s%60].map(x=>String(x).padStart(2,'0')).join(':'); }
+function nowStr() { return new Date().toLocaleTimeString('th-TH',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+
+function addLog(msg, color = '') {
+  const el = document.createElement('div');
+  el.className = 'log-item';
+  el.innerHTML = `<div class="log-t">${nowStr().slice(0,5)}</div><div class="log-m ${color}">${msg}</div>`;
+  const box = document.getElementById('log-box');
+  box.insertBefore(el, box.firstChild);
+  if (box.children.length > 50) box.removeChild(box.lastChild);
+}
+
+let lastOrdLen = 0, prevCycle = 0, prevPrice = 0, prevSig = '';
+
+function applyState(s) {
+  const price = s.price || 0;
+  const sig   = s.signal || 'HOLD';
+  const conf  = s.confidence || 0;
+
+  // topbar
+  document.getElementById('tb-price').textContent = fmt(price);
+  document.getElementById('tb-sig').textContent   = sig;
+  document.getElementById('tb-sig').style.color   = sig==='BUY'?'#4ab464':sig==='SELL'?'#c85050':'#f5c842';
+  document.getElementById('tb-rsi').textContent   = s.rsi ? parseFloat(s.rsi).toFixed(1) : '--';
+  document.getElementById('tb-bal').textContent   = fmt(s.balance_usdt || 0) + ' USDT';
+  document.getElementById('tb-up').textContent    = sec2hms(s.uptime_sec || 0);
+
+  // price card
+  document.getElementById('p-price').textContent = fmt(price);
+  if (prevPrice > 0) {
+    const d = price - prevPrice;
+    const el = document.getElementById('p-diff');
+    el.textContent = `${d >= 0 ? '▲ +' : '▼ '}${d.toFixed(2)} USDT`;
+    el.style.color = d >= 0 ? '#4ab464' : '#c85050';
+  }
+  if (price) prevPrice = price;
+
+  // signal
+  document.getElementById('sig-box').className    = `sig-box ${sig}`;
+  document.getElementById('sig-act').textContent  = sig;
+  document.getElementById('sig-act').className    = `sig-action ${sig}`;
+  document.getElementById('sig-conf').textContent = `ความมั่นใจ ${conf}%`;
+  document.getElementById('sig-reason').textContent = s.reason || '--';
+
+  // indicators
+  document.getElementById('i-e9').textContent   = s.ema_fast ? fmt(s.ema_fast) : '--';
+  document.getElementById('i-e21').textContent  = s.ema_slow ? fmt(s.ema_slow) : '--';
+  const rsiEl = document.getElementById('i-rsi');
+  rsiEl.textContent = s.rsi ? parseFloat(s.rsi).toFixed(1) : '--';
+  rsiEl.style.color = (s.rsi||50)>65?'#c85050':(s.rsi||50)<35?'#4ab464':'#f5c842';
+  document.getElementById('i-atr').textContent   = s.atr ? parseFloat(s.atr).toFixed(4) : '--';
+  const tEl = document.getElementById('i-trend');
+  tEl.textContent = s.trend==='UP'?'▲ ขาขึ้น':s.trend==='DOWN'?'▼ ขาลง':'--';
+  tEl.style.color = s.trend==='UP'?'#4ab464':s.trend==='DOWN'?'#c85050':'rgba(255,255,255,.3)';
+  document.getElementById('i-sl').textContent = s.sl ? fmt(s.sl) : '--';
+  document.getElementById('i-tp').textContent = s.tp ? fmt(s.tp) : '--';
+
+  // price + rsi history
+  if (s.price_history?.length) priceHistory = s.price_history;
+  else if (price > 0) { priceHistory.push(price); if (priceHistory.length > 200) priceHistory.shift(); }
+  if (s.rsi) { rsiHistory.push(parseFloat(s.rsi)); if (rsiHistory.length > 200) rsiHistory.shift(); }
+
+  // orders
+  if (s.orders && s.orders.length !== lastOrdLen) {
+    lastOrdLen = s.orders.length;
+    document.getElementById('ord-cnt').textContent = s.orders.length;
+    const el = document.getElementById('ord-list');
+    if (!s.orders.length) { el.innerHTML = '<div style="padding:10px 0;text-align:center;color:rgba(255,255,255,.25);font-size:10px">ยังไม่มี orders</div>'; }
+    else el.innerHTML = [...s.orders].reverse().map(o => {
+      const pnl = o.pnl || 0;
+      const isOpen = o.status === 'OPEN';
+      return `<div class="ord-row">
+        <div class="side-dot ${o.side.toLowerCase()}">${o.side === 'BUY' ? 'B' : 'S'}</div>
+        <div class="ord-entry">${fmt(o.entry)}</div>
+        <div class="ord-pnl" style="color:${isOpen?'rgba(255,255,255,.3)':pnl>=0?'#4ab464':'#c85050'}">${isOpen?'OPEN':(pnl>=0?'+':'')+pnl.toFixed(3)}</div>
+      </div>`;
+    }).join('');
+  }
+
+  // bubbles + log
+  updateBubbles(sig);
+  if (s.cycle && s.cycle !== prevCycle) {
+    prevCycle = s.cycle;
+    addLog(`Cycle #${s.cycle} · ราคา <strong style="color:#f5c842">${fmt(price)}</strong>`);
+    addLog(`${sig} ${conf}% · RSI ${s.rsi ? parseFloat(s.rsi).toFixed(1) : '--'}`, sig==='BUY'?'c-green':sig==='SELL'?'c-red':'c-gold');
+  }
+  if (prevSig && sig !== prevSig) addLog(`Signal <strong>${prevSig} → ${sig}</strong>`, 'c-blue');
+  prevSig = sig;
+
+  document.getElementById('sb-msg').textContent =
+    `Cycle #${s.cycle||0} · ${fmt(price)} USDT · RSI ${s.rsi?parseFloat(s.rsi).toFixed(1):'--'} · ${sig} ${conf}%`;
+
+  // update modal chart if open
+  if (document.getElementById('modal').classList.contains('open')) buildChart(currentTab);
+}
+
+// ═══════════════════════════════════════════════════
+//  SOCKET.IO
+// ═══════════════════════════════════════════════════
+const socket = io();
+socket.on('connect', () => {
+  document.getElementById('conn-pill').className   = 'pill pill-live';
+  document.getElementById('conn-pill').textContent = '● LIVE';
+  document.getElementById('sb-dot').style.background = '#4ab464';
+  document.getElementById('sb-st').textContent = 'LIVE';
+  addLog('เชื่อมต่อ bot สำเร็จ ✓', 'c-green');
+});
+socket.on('disconnect', () => {
+  document.getElementById('conn-pill').className   = 'pill pill-off';
+  document.getElementById('conn-pill').textContent = '● OFFLINE';
+  document.getElementById('sb-dot').style.background = 'rgba(255,255,255,.2)';
+  document.getElementById('sb-st').textContent = 'OFFLINE';
+  addLog('ขาดการเชื่อมต่อ', 'c-red');
+});
+socket.on('state', applyState);
+
+// ═══════════════════════════════════════════════════
+//  CLOCK & INIT
+// ═══════════════════════════════════════════════════
+setInterval(() => {
+  document.getElementById('sb-time').textContent = new Date().toLocaleTimeString('th-TH',{hour12:false});
+}, 1000);
+
+window.addEventListener('resize', () => { resize(); });
+
+resize();
+render();
+</script>
+</body>
+</html>

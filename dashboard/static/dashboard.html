@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS GOLD — Dashboard</title>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root {
+  --bg:       #0c0f1a;
+  --surface:  #131829;
+  --border:   rgba(255,255,255,0.07);
+  --border-hi:rgba(255,255,255,0.13);
+  --text:     #e8eaf0;
+  --muted:    rgba(255,255,255,0.38);
+  --gold:     #f5c842;
+  --green:    #22c55e;
+  --red:      #ef4444;
+  --blue:     #60a5fa;
+  --purple:   #a78bfa;
+  --cyan:     #22d3ee;
+  --r:        10px;
+}
+
+* { box-sizing:border-box; margin:0; padding:0; }
+html,body { height:100%; overflow:hidden; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Sarabun','Inter',sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+#app {
+  display: grid;
+  grid-template-rows: 52px 1fr 32px;
+  height: 100vh;
+}
+#main {
+  display: grid;
+  grid-template-columns: 220px 1fr 260px;
+  gap: 12px;
+  padding: 12px;
+  overflow: hidden;
+  min-height: 0;
+}
+#col-left, #col-center, #col-right {
+  display: flex; flex-direction: column; gap: 10px;
+  min-height: 0; overflow: hidden;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px 16px;
+  flex-shrink: 0;
+}
+.card.grow { flex:1; min-height:0; display:flex; flex-direction:column; }
+.card-label {
+  font-size: 9px; font-weight: 600; letter-spacing: 1.8px;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 10px;
+}
+
+#header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 18px;
+}
+.logo { font-family:'Inter',sans-serif; font-weight:700; font-size:16px; color:var(--gold); letter-spacing:1px; }
+.logo span { color:var(--muted); font-weight:400; font-size:11px; margin-left:8px; }
+.hdr-live { display:flex; align-items:center; gap:6px; font-size:10px; font-weight:600; color:var(--green); }
+.dot-live { width:7px; height:7px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:blink 2s ease-in-out infinite; }
+.dot-off  { width:7px; height:7px; border-radius:50%; background:var(--muted); }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+.hdr-right { display:flex; align-items:center; gap:22px; }
+.hdr-kv { text-align:right; }
+.hdr-kv-label { font-size:9px; color:var(--muted); }
+.hdr-kv-val { font-family:'JetBrains Mono',monospace; font-size:13px; font-weight:600; }
+
+.kpi-price { font-family:'JetBrains Mono',monospace; font-size:32px; font-weight:600; color:var(--gold); line-height:1; margin-bottom:4px; }
+.kpi-badge { display:inline-flex; align-items:center; gap:4px; padding:3px 9px; border-radius:20px; font-size:11px; font-weight:600; }
+.kpi-badge.up   { background:rgba(34,197,94,.12); color:var(--green); }
+.kpi-badge.down { background:rgba(239,68,68,.12);  color:var(--red); }
+
+.signal-big { font-family:'Inter',sans-serif; font-size:26px; font-weight:700; letter-spacing:3px; text-align:center; padding:18px 0 12px; border-radius:8px; margin-bottom:10px; }
+.signal-big.BUY  { color:var(--green); background:rgba(34,197,94,.07); }
+.signal-big.SELL { color:var(--red);   background:rgba(239,68,68,.07); }
+.signal-big.HOLD { color:var(--gold);  background:rgba(245,200,66,.07); }
+
+.gauge-wrap { margin-bottom:8px; }
+.gauge-row  { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+.gauge-name { font-size:11px; color:var(--muted); }
+.gauge-val  { font-family:'JetBrains Mono',monospace; font-size:11px; font-weight:600; }
+.gauge-track { height:5px; border-radius:3px; background:rgba(255,255,255,.06); overflow:hidden; }
+.gauge-fill  { height:100%; border-radius:3px; transition:width .8s cubic-bezier(.4,0,.2,1); }
+
+.chart-wrap { flex:1; min-height:0; position:relative; }
+canvas.sparkline { width:100%; height:100%; display:block; }
+
+.ind-row { display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid rgba(255,255,255,.04); }
+.ind-row:last-child { border-bottom:none; }
+.ind-label { font-size:11px; color:var(--muted); }
+.ind-val   { font-family:'JetBrains Mono',monospace; font-size:12px; font-weight:600; }
+
+.order-row { display:grid; grid-template-columns:36px 1fr 80px 70px; gap:6px; align-items:center; padding:7px 4px; border-bottom:1px solid rgba(255,255,255,.04); font-size:11px; }
+.order-row:last-child { border-bottom:none; }
+.side-tag { font-size:10px; font-weight:700; letter-spacing:.5px; padding:2px 0; border-radius:4px; text-align:center; }
+.side-tag.buy  { background:rgba(34,197,94,.15); color:var(--green); }
+.side-tag.sell { background:rgba(239,68,68,.15);  color:var(--red); }
+.order-price { font-family:'JetBrains Mono',monospace; text-align:right; }
+.order-pnl   { font-family:'JetBrains Mono',monospace; text-align:right; font-size:11px; }
+
+.log-wrap { flex:1; min-height:0; overflow-y:auto; }
+.log-wrap::-webkit-scrollbar { width:3px; }
+.log-wrap::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:2px; }
+.log-entry { display:flex; gap:8px; padding:5px 0; border-bottom:1px solid rgba(255,255,255,.03); animation:fadeIn .25s ease; }
+@keyframes fadeIn { from{opacity:0;transform:translateY(-3px)} to{opacity:1;transform:none} }
+.log-time { font-family:'JetBrains Mono',monospace; font-size:9px; color:var(--muted); flex-shrink:0; padding-top:1px; }
+.log-msg  { font-size:10px; line-height:1.5; }
+
+#statusbar { background:var(--surface); border-top:1px solid var(--border); display:flex; align-items:center; gap:20px; padding:0 18px; font-size:9px; color:var(--muted); letter-spacing:.5px; }
+#statusbar .sep { color:rgba(255,255,255,.1); }
+.sb-pulse { color:var(--green); font-weight:700; animation:blink 3s ease-in-out infinite; }
+.sb-off   { color:var(--muted); font-weight:700; }
+
+.c-gold{color:var(--gold)} .c-green{color:var(--green)} .c-red{color:var(--red)}
+.c-blue{color:var(--blue)} .c-purple{color:var(--purple)} .c-cyan{color:var(--cyan)} .c-muted{color:var(--muted)}
+
+.tabs { display:flex; gap:2px; margin-bottom:12px; }
+.tab { padding:4px 12px; border-radius:6px; font-size:10px; font-weight:600; cursor:pointer; color:var(--muted); transition:all .2s; }
+.tab.active { background:rgba(255,255,255,.08); color:var(--text); }
+
+.orders-scroll { flex:1; min-height:0; overflow-y:auto; }
+.orders-scroll::-webkit-scrollbar { width:3px; }
+.orders-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,.1); border-radius:2px; }
+
+.divider { height:1px; background:var(--border); margin:10px 0; }
+
+.pos-card { border:1px solid rgba(245,200,66,.3); background:rgba(245,200,66,.04); border-radius:8px; padding:10px 12px; margin-bottom:4px; }
+.pos-card.buy-pos  { border-color:rgba(34,197,94,.3); background:rgba(34,197,94,.04); }
+.pos-card.sell-pos { border-color:rgba(239,68,68,.3); background:rgba(239,68,68,.04); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="header">
+    <div style="display:flex;align-items:center;gap:16px">
+      <div class="logo">⚡ NEXUS GOLD <span>AI Trading System</span></div>
+      <div class="hdr-live" id="conn-status"><div class="dot-off" id="conn-dot"></div><span id="conn-label">กำลังเชื่อมต่อ...</span></div>
+    </div>
+    <div class="hdr-right">
+      <div class="hdr-kv">
+        <div class="hdr-kv-label">ราคา XAUTUSDT</div>
+        <div class="hdr-kv-val c-gold" id="h-price">--</div>
+      </div>
+      <div class="hdr-kv">
+        <div class="hdr-kv-label">Signal</div>
+        <div class="hdr-kv-val c-green" id="h-sig">--</div>
+      </div>
+      <div class="hdr-kv">
+        <div class="hdr-kv-label">Balance USDT</div>
+        <div class="hdr-kv-val c-gold" id="h-bal">--</div>
+      </div>
+      <div class="hdr-kv">
+        <div class="hdr-kv-label">เวลาทำงาน</div>
+        <div class="hdr-kv-val c-purple" id="h-up">00:00:00</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div id="main">
+
+    <!-- COL LEFT -->
+    <div id="col-left">
+
+      <div class="card">
+        <div class="card-label">ราคาทองคำ</div>
+        <div class="kpi-price" id="kpi-price">--</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+          <div class="kpi-badge up" id="kpi-badge">-- USDT</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-label">AI Signal ปัจจุบัน</div>
+        <div class="signal-big HOLD" id="sig-big">HOLD</div>
+        <div class="gauge-wrap">
+          <div class="gauge-row">
+            <span class="gauge-name">ความมั่นใจ</span>
+            <span class="gauge-val" id="sig-conf">0%</span>
+          </div>
+          <div class="gauge-track">
+            <div class="gauge-fill" id="sig-conf-bar" style="width:0%;background:var(--gold)"></div>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--muted);line-height:1.6" id="sig-reason">รอข้อมูลจาก bot...</div>
+      </div>
+
+      <div class="card grow">
+        <div class="card-label">ตัวชี้วัดทางเทคนิค</div>
+        <div class="ind-row"><span class="ind-label">EMA 9</span><span class="ind-val c-cyan" id="ind-e9">--</span></div>
+        <div class="ind-row"><span class="ind-label">EMA 21</span><span class="ind-val c-blue" id="ind-e21">--</span></div>
+        <div class="ind-row"><span class="ind-label">RSI (14)</span><span class="ind-val c-gold" id="ind-rsi">--</span></div>
+        <div class="ind-row"><span class="ind-label">ATR</span><span class="ind-val c-muted" id="ind-atr">--</span></div>
+        <div class="ind-row"><span class="ind-label">Trend</span><span class="ind-val" id="ind-trend">--</span></div>
+        <div class="ind-row"><span class="ind-label">Stop Loss</span><span class="ind-val c-red" id="ind-sl">--</span></div>
+        <div class="ind-row"><span class="ind-label">Take Profit</span><span class="ind-val c-green" id="ind-tp">--</span></div>
+        <div class="ind-row"><span class="ind-label">Cycle #</span><span class="ind-val c-muted" id="ind-cycle">--</span></div>
+      </div>
+    </div>
+
+    <!-- COL CENTER -->
+    <div id="col-center">
+
+      <div class="card grow" style="flex:2">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="card-label" style="margin-bottom:0">กราฟราคา XAUTUSDT (real-time)</div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="price-chart"></canvas>
+        </div>
+      </div>
+
+      <div class="card grow" style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div class="card-label" style="margin-bottom:0">รายการ Order ล่าสุด</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted)" id="ord-count">0 orders</div>
+        </div>
+        <div style="display:grid;grid-template-columns:36px 1fr 80px 70px;gap:6px;padding:0 4px 8px;border-bottom:1px solid var(--border)">
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;font-weight:600">ทิศ</div>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;font-weight:600">ราคาเข้า</div>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;font-weight:600;text-align:right">ปิดที่</div>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:1px;font-weight:600;text-align:right">P&L</div>
+        </div>
+        <div class="orders-scroll" id="orders-list">
+          <div style="padding:20px;text-align:center;color:var(--muted);font-size:11px">รอ orders จาก bot...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COL RIGHT -->
+    <div id="col-right">
+
+      <div class="card">
+        <div class="card-label">ภาพรวมพอร์ต</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <div style="font-size:9px;color:var(--muted);margin-bottom:3px">USDT Balance</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--gold)" id="stat-usdt">--</div>
+          </div>
+          <div>
+            <div style="font-size:9px;color:var(--muted);margin-bottom:3px">XAUT Balance</div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:600;color:var(--cyan)" id="stat-xaut">--</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="position-card">
+        <div class="card-label">Position เปิดอยู่</div>
+        <div id="position-content" style="color:var(--muted);font-size:11px;text-align:center;padding:10px 0">
+          ยังไม่มี position เปิด
+        </div>
+      </div>
+
+      <div class="card grow">
+        <div class="card-label">บันทึกกิจกรรม</div>
+        <div class="log-wrap" id="log-wrap">
+          <div class="log-entry">
+            <div class="log-time">--:--:--</div>
+            <div class="log-msg c-muted">รอเชื่อมต่อกับ bot...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div id="statusbar">
+    <span id="sb-live" class="sb-off">● OFFLINE</span>
+    <span id="sb-time">--:--:--</span>
+    <span class="sep">|</span>
+    <span id="sb-msg">กำลังเชื่อมต่อ...</span>
+    <span class="sep" style="margin-left:auto">|</span>
+    <span>Binance TH · XAUTUSDT Spot</span>
+    <span class="sep">|</span>
+    <span>EMA 9/21 + RSI 14</span>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════
+//  PRICE CHART
+// ═══════════════════════════════════════════════
+const pCanvas = document.getElementById('price-chart');
+const pCtx    = pCanvas.getContext('2d');
+let priceHistory = [];
+
+function resizeChart(){
+  const wrap = pCanvas.parentElement;
+  pCanvas.width  = wrap.clientWidth;
+  pCanvas.height = wrap.clientHeight;
+}
+
+function drawChart(){
+  resizeChart();
+  const W = pCanvas.width, H = pCanvas.height;
+  if(!W || !H || priceHistory.length < 2) return;
+
+  pCtx.clearRect(0,0,W,H);
+
+  const data = priceHistory.slice(-Math.min(priceHistory.length, W));
+  const mn = Math.min(...data)-1, mx = Math.max(...data)+1, rng = mx-mn||1;
+  const py = v => H - 24 - ((v-mn)/rng)*(H-48);
+  const px = i => (i/(data.length-1))*W;
+
+  // Grid
+  pCtx.strokeStyle='rgba(255,255,255,.04)'; pCtx.lineWidth=1;
+  for(let y=0;y<5;y++){
+    const yy=24+(y/4)*(H-48);
+    pCtx.beginPath(); pCtx.moveTo(0,yy); pCtx.lineTo(W,yy); pCtx.stroke();
+    pCtx.fillStyle='rgba(255,255,255,.2)'; pCtx.font='9px JetBrains Mono,monospace';
+    pCtx.fillText((mx-(y/4)*rng).toFixed(2),4,yy-3);
+  }
+
+  // Area
+  pCtx.beginPath();
+  data.forEach((v,i)=>{ i===0?pCtx.moveTo(px(i),py(v)):pCtx.lineTo(px(i),py(v)); });
+  pCtx.lineTo(px(data.length-1),H); pCtx.lineTo(0,H); pCtx.closePath();
+  const ag=pCtx.createLinearGradient(0,0,0,H);
+  ag.addColorStop(0,'rgba(245,200,66,.18)'); ag.addColorStop(1,'rgba(245,200,66,0)');
+  pCtx.fillStyle=ag; pCtx.fill();
+
+  // Line
+  pCtx.beginPath();
+  data.forEach((v,i)=>{ i===0?pCtx.moveTo(px(i),py(v)):pCtx.lineTo(px(i),py(v)); });
+  pCtx.strokeStyle='rgba(245,200,66,.85)'; pCtx.lineWidth=1.8; pCtx.lineJoin='round'; pCtx.stroke();
+
+  // Last dot
+  const last=data[data.length-1];
+  pCtx.beginPath(); pCtx.arc(px(data.length-1),py(last),4,0,Math.PI*2);
+  pCtx.fillStyle='#f5c842'; pCtx.shadowBlur=10; pCtx.shadowColor='#f5c842'; pCtx.fill(); pCtx.shadowBlur=0;
+
+  // Price label
+  const lx=W-72, ly=py(last)-10;
+  pCtx.fillStyle='rgba(12,15,26,.9)'; pCtx.fillRect(lx,ly,68,16);
+  pCtx.strokeStyle='rgba(245,200,66,.4)'; pCtx.lineWidth=1; pCtx.strokeRect(lx,ly,68,16);
+  pCtx.fillStyle='#f5c842'; pCtx.font='bold 10px JetBrains Mono,monospace';
+  pCtx.fillText(last.toFixed(2),lx+4,ly+11);
+}
+
+// ═══════════════════════════════════════════════
+//  ORDERS LIST
+// ═══════════════════════════════════════════════
+let lastOrderCount = 0;
+
+function renderOrders(orders){
+  if(!orders || orders.length === lastOrderCount) return;
+  lastOrderCount = orders.length;
+  const el = document.getElementById('orders-list');
+  document.getElementById('ord-count').textContent = orders.length + ' orders';
+  if(orders.length === 0){
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--muted);font-size:11px">ยังไม่มี orders</div>';
+    return;
+  }
+  el.innerHTML = [...orders].reverse().map(o=>{
+    const isOpen = o.status === 'OPEN';
+    const closeAt = isOpen ? 'OPEN' : (o.close_price||0).toFixed(2);
+    const pnl = o.pnl || 0;
+    const pnlClass = pnl >= 0 ? 'c-green' : 'c-red';
+    const pnlStr = isOpen ? '--' : `${pnl>=0?'+':''}${pnl.toFixed(4)}`;
+    return `<div class="order-row">
+      <div class="side-tag ${o.side.toLowerCase()}">${o.side}</div>
+      <div class="order-price num">${(o.entry||0).toFixed(2)}</div>
+      <div class="order-price num c-muted">${closeAt}</div>
+      <div class="order-pnl num ${pnlClass}">${pnlStr}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+//  OPEN POSITION
+// ═══════════════════════════════════════════════
+function renderPosition(pos, price){
+  const el = document.getElementById('position-content');
+  if(!pos){
+    el.innerHTML = '<div style="color:var(--muted);font-size:11px;text-align:center;padding:10px 0">ยังไม่มี position เปิด</div>';
+    return;
+  }
+  const isUp = pos.side === 'BUY';
+  const pnl  = isUp ? (price - pos.entry) * pos.quantity : (pos.entry - price) * pos.quantity;
+  const pnlColor = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+  el.innerHTML = `
+    <div class="pos-card ${isUp?'buy-pos':'sell-pos'}">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="font-weight:700;font-size:13px;color:${isUp?'var(--green)':'var(--red)'}">${pos.side}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600;color:${pnlColor}">${pnl>=0?'+':''}${pnl.toFixed(4)} USDT</span>
+      </div>
+      <div style="font-size:10px;color:var(--muted);display:grid;grid-template-columns:1fr 1fr;gap:4px">
+        <div>เข้า: <span style="color:var(--text);font-family:'JetBrains Mono',monospace">${pos.entry.toFixed(2)}</span></div>
+        <div>ปัจจุบัน: <span style="color:var(--gold);font-family:'JetBrains Mono',monospace">${price.toFixed(2)}</span></div>
+        <div>SL: <span style="color:var(--red);font-family:'JetBrains Mono',monospace">${pos.sl.toFixed(2)}</span></div>
+        <div>TP: <span style="color:var(--green);font-family:'JetBrains Mono',monospace">${pos.tp.toFixed(2)}</span></div>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════
+//  LOG
+// ═══════════════════════════════════════════════
+const logWrap = document.getElementById('log-wrap');
+let lastCycle = 0;
+
+function addLog(color, msg){
+  const el = document.createElement('div');
+  el.className='log-entry';
+  const now=new Date().toLocaleTimeString('th-TH',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  el.innerHTML=`<div class="log-time">${now}</div><div class="log-msg ${color}">${msg}</div>`;
+  logWrap.insertBefore(el,logWrap.firstChild);
+  if(logWrap.children.length>60) logWrap.removeChild(logWrap.lastChild);
+}
+
+// ═══════════════════════════════════════════════
+//  FORMAT HELPERS
+// ═══════════════════════════════════════════════
+function fmt(n){ return n ? n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g,',') : '--'; }
+function sec2hms(s){
+  const h=String(Math.floor(s/3600)).padStart(2,'0');
+  const m=String(Math.floor((s%3600)/60)).padStart(2,'0');
+  const sec=String(s%60).padStart(2,'0');
+  return `${h}:${m}:${sec}`;
+}
+
+// ═══════════════════════════════════════════════
+//  APPLY STATE FROM SERVER
+// ═══════════════════════════════════════════════
+let prevSignal = '';
+let prevPrice  = 0;
+
+function applyState(s){
+  const price = s.price || 0;
+
+  // Header
+  document.getElementById('h-price').textContent = fmt(price);
+  document.getElementById('h-bal').textContent   = (s.balance_usdt||0).toFixed(2)+' USDT';
+  document.getElementById('h-up').textContent    = sec2hms(s.uptime_sec||0);
+
+  // Price card
+  document.getElementById('kpi-price').textContent = fmt(price);
+  const diff = price - prevPrice;
+  const badge = document.getElementById('kpi-badge');
+  if(prevPrice > 0){
+    const isUp = diff >= 0;
+    badge.textContent = `${isUp?'▲':'▼'} ${(diff>=0?'+':'')}${diff.toFixed(2)} USDT`;
+    badge.className   = `kpi-badge ${isUp?'up':'down'}`;
+  }
+  prevPrice = price || prevPrice;
+
+  // Signal
+  const sig  = s.signal || 'HOLD';
+  const conf = s.confidence || 0;
+  document.getElementById('h-sig').textContent    = sig;
+  document.getElementById('h-sig').style.color    = sig==='BUY'?'#22c55e':sig==='SELL'?'#ef4444':'#f5c842';
+  document.getElementById('sig-big').textContent  = sig;
+  document.getElementById('sig-big').className    = `signal-big ${sig}`;
+  document.getElementById('sig-conf').textContent = conf+'%';
+  document.getElementById('sig-conf').style.color = sig==='BUY'?'var(--green)':sig==='SELL'?'var(--red)':'var(--gold)';
+  document.getElementById('sig-conf-bar').style.width = conf+'%';
+  document.getElementById('sig-conf-bar').style.background = sig==='BUY'?'var(--green)':sig==='SELL'?'var(--red)':'var(--gold)';
+  document.getElementById('sig-reason').textContent = s.reason||'--';
+
+  // Indicators
+  document.getElementById('ind-e9').textContent   = s.ema_fast ? s.ema_fast.toFixed(2) : '--';
+  document.getElementById('ind-e21').textContent  = s.ema_slow ? s.ema_slow.toFixed(2) : '--';
+  const rsiEl = document.getElementById('ind-rsi');
+  rsiEl.textContent = s.rsi ? s.rsi.toFixed(1) : '--';
+  rsiEl.className   = `ind-val ${(s.rsi||50)>65?'c-red':(s.rsi||50)<35?'c-green':'c-gold'}`;
+  document.getElementById('ind-atr').textContent   = s.atr  ? s.atr.toFixed(4) : '--';
+  const tEl = document.getElementById('ind-trend');
+  tEl.textContent = s.trend==='UP'?'▲ ขาขึ้น':s.trend==='DOWN'?'▼ ขาลง':'--';
+  tEl.className   = `ind-val ${s.trend==='UP'?'c-green':s.trend==='DOWN'?'c-red':'c-muted'}`;
+  document.getElementById('ind-sl').textContent    = s.sl ? s.sl.toFixed(2) : '--';
+  document.getElementById('ind-tp').textContent    = s.tp ? s.tp.toFixed(2) : '--';
+  document.getElementById('ind-cycle').textContent = s.cycle || '--';
+
+  // Balance
+  document.getElementById('stat-usdt').textContent = (s.balance_usdt||0).toFixed(2)+' USDT';
+  document.getElementById('stat-xaut').textContent = (s.balance_xaut||0).toFixed(6)+' XAUT';
+
+  // Chart
+  if(s.price_history && s.price_history.length > 0){
+    priceHistory = s.price_history;
+  }
+  drawChart();
+
+  // Orders
+  renderOrders(s.orders);
+
+  // Position
+  renderPosition(s.open_position, price);
+
+  // Log เมื่อ cycle เปลี่ยน
+  if(s.cycle && s.cycle !== lastCycle){
+    lastCycle = s.cycle;
+    const sigColor = sig==='BUY'?'c-green':sig==='SELL'?'c-red':'c-gold';
+    addLog('c-muted', `Cycle #${s.cycle} — ราคา <span class="c-gold">${fmt(price)}</span>`);
+    addLog(sigColor, `Signal: <strong>${sig}</strong> (${conf}%) — ${s.reason||''}`);
+    if(s.open_position){
+      addLog('c-cyan', `Position เปิดอยู่: ${s.open_position.side} @ ${s.open_position.entry.toFixed(2)}`);
+    }
+  }
+
+  // Log เมื่อ signal เปลี่ยน
+  if(prevSignal && sig !== prevSignal){
+    addLog('c-purple', `Signal เปลี่ยนจาก <strong>${prevSignal}</strong> → <strong>${sig}</strong>`);
+  }
+  prevSignal = sig;
+
+  // Status bar
+  document.getElementById('sb-msg').textContent =
+    `Cycle #${s.cycle||0} · RSI ${(s.rsi||0).toFixed(1)} · ${sig} ${conf}%`;
+}
+
+// ═══════════════════════════════════════════════
+//  SOCKET.IO
+// ═══════════════════════════════════════════════
+const socket = io();
+
+socket.on('connect', ()=>{
+  document.getElementById('conn-dot').className   = 'dot-live';
+  document.getElementById('conn-label').textContent = 'LIVE';
+  document.getElementById('sb-live').className    = 'sb-pulse';
+  document.getElementById('sb-live').textContent  = '● LIVE';
+  document.getElementById('sb-msg').textContent   = 'เชื่อมต่อ bot สำเร็จ';
+  addLog('c-green', 'เชื่อมต่อ dashboard สำเร็จ');
+});
+
+socket.on('disconnect', ()=>{
+  document.getElementById('conn-dot').className    = 'dot-off';
+  document.getElementById('conn-label').textContent= 'OFFLINE';
+  document.getElementById('sb-live').className     = 'sb-off';
+  document.getElementById('sb-live').textContent   = '● OFFLINE';
+  addLog('c-red','ขาดการเชื่อมต่อจาก bot');
+});
+
+socket.on('state', applyState);
+
+// ═══════════════════════════════════════════════
+//  CLOCK
+// ═══════════════════════════════════════════════
+setInterval(()=>{
+  document.getElementById('sb-time').textContent =
+    new Date().toLocaleTimeString('th-TH',{hour12:false});
+}, 1000);
+
+window.addEventListener('resize', drawChart);
+drawChart();
+</script>
+</body>
+</html>

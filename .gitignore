@@ -1,0 +1,12 @@
+# ห้าม commit สิ่งเหล่านี้เด็ดขาด!
+.env
+cloudflared.exe
+*.log
+logs/
+data/
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store
+venv/
+.venv/
