@@ -2,356 +2,496 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#050508">
 <title>NEXUS GOLD</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{background:#050508;color:#e0e8ff;font-family:'Inter',sans-serif;min-height:100vh;font-size:14px}
+html,body{background:#050508;color:#c0d0ff;font-family:'Press Start 2P',monospace;overflow-x:hidden;min-height:100vh}
+body::after{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.08) 2px,rgba(0,0,0,.08) 4px);pointer-events:none;z-index:999}
 
-/* TOP BAR */
-.topbar{background:#08080f;border-bottom:1px solid #00ff8830;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
-.brand{font-weight:700;font-size:15px;color:#00ff88;letter-spacing:1px}
-.brand span{color:#2a4a2a;font-weight:400;font-size:11px;margin-left:6px}
-.pill{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600}
-.pill-live{background:#00200e;color:#00ff88;border:1px solid #00ff8840}
-.pill-off{background:#0a0a14;color:#2a3a2a;border:1px solid #1a1a2a}
+/* TOP */
+#top{background:#08080f;border-bottom:2px solid #00ff8830;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.brand{font-size:9px;color:#00ff88;text-shadow:0 0 10px #00ff88;letter-spacing:1px}
+.pill{padding:3px 8px;font-size:7px;border:2px solid;font-family:'Press Start 2P'}
+.pill-live{border-color:#00ff88;color:#00ff88;animation:blink 2s step-end infinite}
+.pill-off{border-color:#1a2a1a;color:#1a2a1a}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
-/* PULL TO REFRESH */
-.refresh-hint{text-align:center;padding:8px;font-size:11px;color:#1a3a1a}
+/* CANVAS */
+#canvas-wrap{width:100%;background:#050508;position:relative}
+#gc{display:block;width:100%;image-rendering:pixelated}
 
-/* CARDS */
-.container{padding:12px;display:flex;flex-direction:column;gap:10px;max-width:500px;margin:0 auto}
-.card{background:#08080f;border:1px solid #0d1a0d;border-radius:12px;padding:14px 16px}
-.card-title{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#1a3a1a;margin-bottom:12px}
+/* STATUS BAR */
+#sb{background:#04040a;border-top:1px solid #00ff8820;padding:5px 12px;font-size:6px;color:#1a3a1a;display:flex;justify-content:space-between}
 
-/* PRICE HERO */
-.price-big{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:600;color:#ffe600;line-height:1;text-shadow:0 0 20px #ffe60040}
-.price-sub{font-size:11px;margin-top:6px}
+/* PANELS — horizontal scroll */
+.panels{display:flex;flex-direction:column;gap:8px;padding:10px}
 
-/* SIGNAL BOX */
-.sig-box{border-radius:8px;padding:12px;text-align:center;margin-bottom:10px}
-.sig-box.BUY{background:#001a08;border:1px solid #00ff8840}
-.sig-box.SELL{background:#1a0008;border:1px solid #ff4d8b40}
-.sig-box.HOLD{background:#1a1400;border:1px solid #ffe60040}
-.sig-txt{font-size:24px;font-weight:700;letter-spacing:4px}
-.sig-txt.BUY{color:#00ff88}
-.sig-txt.SELL{color:#ff4d8b}
-.sig-txt.HOLD{color:#ffe600}
-.sig-conf{font-size:11px;color:#2a4a2a;margin-top:4px}
+/* CARD */
+.card{background:#08080f;border:1px solid #0d1a0d;border-radius:8px;padding:12px 14px}
+.clbl{font-size:7px;color:#1a3a1a;letter-spacing:2px;margin-bottom:10px}
+
+/* PRICE */
+.price-big{font-size:28px;color:#ffe600;text-shadow:0 0 16px #ffe60040;line-height:1}
+.price-sub{font-size:6px;color:#1a3a1a;margin-top:5px}
+
+/* SIGNAL */
+.sig-box{border-radius:6px;padding:10px;text-align:center;margin-bottom:8px}
+.sig-box.BUY{background:#001a08;border:2px solid #00ff8840}
+.sig-box.SELL{background:#1a0008;border:2px solid #ff4d8b40}
+.sig-box.HOLD{background:#1a1400;border:2px solid #ffe60040}
+.sig-txt{font-size:20px;letter-spacing:4px}
+.sig-txt.BUY{color:#00ff88;text-shadow:0 0 12px #00ff88}
+.sig-txt.SELL{color:#ff4d8b;text-shadow:0 0 12px #ff4d8b}
+.sig-txt.HOLD{color:#ffe600;text-shadow:0 0 12px #ffe600}
+.sig-sub{font-size:6px;color:#1a3a1a;margin-top:5px}
 
 /* GRID */
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.mini-card{background:#060610;border:1px solid #0d100d;border-radius:8px;padding:10px 12px}
-.mc-label{font-size:9px;color:#1a2a1a;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
-.mc-val{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.mini{background:#06060c;border:1px solid #0a100a;border-radius:6px;padding:8px 10px}
+.mlbl{font-size:6px;color:#1a2a1a;margin-bottom:4px}
+.mval{font-size:13px;font-weight:700}
 
-/* INDICATOR ROWS */
-.ind-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #0a0a14}
-.ind-row:last-child{border-bottom:none}
-.ind-lbl{font-size:11px;color:#1a2a1a}
-.ind-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
+/* IND ROWS */
+.ir{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #0a0a14;font-size:8px}
+.ir:last-child{border-bottom:none}
+.il{color:#1a2a1a}
+.iv{font-size:9px}
 
-/* POSITION CARD */
-.pos-inner{border-radius:8px;padding:10px 12px}
-.pos-inner.buy-p{background:#001a08;border:1px solid #00ff8830}
-.pos-inner.sell-p{background:#1a0008;border:1px solid #ff4d8b30}
-.pos-inner.no-p{background:#0a0a14;text-align:center;padding:14px;color:#1a2a2a;font-size:12px}
+/* TRADE ITEMS */
+.ti{padding:8px 0;border-bottom:1px solid #0a0a14}
+.ti:last-child{border-bottom:none}
+.ti-top{display:flex;justify-content:space-between;margin-bottom:4px}
+.badge{padding:2px 6px;border-radius:3px;font-size:6px;font-weight:700;border:1px solid}
+.b-buy{color:#00ff88;border-color:#00ff8840;background:#001a08}
+.b-sell{color:#ff4d8b;border-color:#ff4d8b40;background:#1a0008}
+.b-tp{color:#00ff88;border-color:#00ff8840;background:#001a08}
+.b-sl{color:#ff4d8b;border-color:#ff4d8b40;background:#1a0008}
+.b-open{color:#ffe600;border-color:#ffe60040;background:#1a1400}
+.ti-pnl{font-size:10px}
+.ti-det{font-size:6px;color:#1a2a1a;margin-top:3px;line-height:1.8}
 
-/* TRADE LIST */
-.trade-item{padding:10px 0;border-bottom:1px solid #0a0a14}
-.trade-item:last-child{border-bottom:none}
-.trade-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
-.side-badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
-.side-badge.buy{background:#001a08;color:#00ff88;border:1px solid #00ff8830}
-.side-badge.sell{background:#1a0008;color:#ff4d8b;border:1px solid #ff4d8b30}
-.result-badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
-.result-badge.TP{background:#001a08;color:#00ff88}
-.result-badge.SL{background:#1a0008;color:#ff4d8b}
-.result-badge.OPEN{background:#1a1400;color:#ffe600}
-.trade-detail{font-size:10px;color:#2a3a2a;display:flex;gap:10px;flex-wrap:wrap}
-.trade-pnl{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600}
-
-/* STATS GRID */
-.stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
-.stat-box{background:#060610;border:1px solid #0d100d;border-radius:8px;padding:8px 10px;text-align:center}
-.stat-num{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:600}
-.stat-lbl{font-size:9px;color:#1a2a1a;margin-top:2px}
-
-/* LAST UPDATE */
-.last-update{text-align:center;font-size:10px;color:#1a2a1a;padding:8px}
-.spinner{display:inline-block;width:10px;height:10px;border:1.5px solid #1a3a1a;border-top-color:#00ff88;border-radius:50%;animation:spin .8s linear infinite;margin-right:4px;vertical-align:middle}
+/* REFRESH */
+.rfbtn{width:100%;padding:10px;background:#00ff8812;border:2px solid #00ff8830;border-radius:6px;color:#00ff88;font-size:7px;cursor:pointer;font-family:'Press Start 2P';letter-spacing:1px}
+.rfbtn:active{background:#00ff8825}
+.spinner{display:inline-block;width:8px;height:8px;border:1.5px solid #1a3a1a;border-top-color:#00ff88;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* COLOR */
 .cg{color:#00ff88}.cy{color:#ffe600}.cr{color:#ff4d8b}.cb{color:#00e5ff}.cm{color:#1a3a1a}
-
-/* REFRESH BTN */
-.refresh-btn{width:100%;padding:12px;background:#00ff8812;border:1px solid #00ff8830;border-radius:8px;color:#00ff88;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;margin-top:4px}
-.refresh-btn:active{background:#00ff8820}
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <div class="brand">⚡ NEXUS GOLD<span>AI Bot</span></div>
-  <div class="pill pill-off" id="conn-pill">● OFFLINE</div>
+<div id="top">
+  <div class="brand">▶ NEXUS.EXE</div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span style="font-size:6px;color:#1a3a1a" id="upd">--:--</span>
+    <div class="pill pill-off" id="cpill">● OFF</div>
+  </div>
 </div>
 
-<div class="refresh-hint" id="refresh-hint">อัปเดตล่าสุด: --:--:--</div>
+<!-- CANVAS ROOM -->
+<div id="canvas-wrap">
+  <canvas id="gc"></canvas>
+</div>
+<div id="sb">
+  <span id="sb-msg">LOADING...</span>
+  <span class="cm">BINANCE TH · XAUTUSDT</span>
+</div>
 
-<div class="container">
+<!-- DATA PANELS -->
+<div class="panels">
 
-  <!-- PRICE -->
   <div class="card">
-    <div class="card-title">ราคาทองคำ</div>
-    <div class="price-big" id="price">--,---.--</div>
-    <div class="price-sub" id="price-sub" style="color:#1a3a1a">XAUTUSDT</div>
+    <div class="clbl">▸ PRICE</div>
+    <div class="price-big" id="p-price">--,---.--</div>
+    <div class="price-sub" id="p-sub">XAUTUSDT</div>
   </div>
 
-  <!-- SIGNAL -->
   <div class="card">
-    <div class="card-title">AI Signal</div>
+    <div class="clbl">▸ SIGNAL</div>
     <div class="sig-box HOLD" id="sig-box">
       <div class="sig-txt HOLD" id="sig-txt">HOLD</div>
-      <div class="sig-conf" id="sig-conf">Confidence: 0%</div>
+      <div class="sig-sub" id="sig-sub">CONF: 0%</div>
     </div>
-    <div style="font-size:11px;color:#1a3a1a;line-height:1.6" id="sig-reason">รอข้อมูล...</div>
+    <div style="font-size:6px;color:#1a3a1a;line-height:1.8" id="sig-reason">รอข้อมูล...</div>
   </div>
 
-  <!-- PORTFOLIO -->
-  <div class="grid2">
-    <div class="mini-card">
-      <div class="mc-label">USDT</div>
-      <div class="mc-val cy" id="bal-usdt">--</div>
-    </div>
-    <div class="mini-card">
-      <div class="mc-label">XAUT</div>
-      <div class="mc-val cb" id="bal-xaut">--</div>
-    </div>
+  <div class="g2">
+    <div class="mini"><div class="mlbl">USDT</div><div class="mval cy" id="b-usdt">--</div></div>
+    <div class="mini"><div class="mlbl">XAUT</div><div class="mval cb" id="b-xaut">--</div></div>
   </div>
 
-  <!-- INDICATORS -->
   <div class="card">
-    <div class="card-title">Indicators</div>
-    <div class="ind-row"><span class="ind-lbl">EMA 9</span><span class="ind-val cb" id="i-e9">--</span></div>
-    <div class="ind-row"><span class="ind-lbl">EMA 21</span><span class="ind-val cm" id="i-e21">--</span></div>
-    <div class="ind-row"><span class="ind-lbl">RSI (14)</span><span class="ind-val cy" id="i-rsi">--</span></div>
-    <div class="ind-row"><span class="ind-lbl">Trend</span><span class="ind-val" id="i-trend">--</span></div>
-    <div class="ind-row"><span class="ind-lbl">Stop Loss</span><span class="ind-val cr" id="i-sl">--</span></div>
-    <div class="ind-row"><span class="ind-lbl">Take Profit</span><span class="ind-val cg" id="i-tp">--</span></div>
-    <div class="ind-row"><span class="ind-lbl">Cycle</span><span class="ind-val cm" id="i-cycle">--</span></div>
+    <div class="clbl">▸ INDICATORS</div>
+    <div class="ir"><span class="il">EMA 9</span><span class="iv cb" id="i-e9">--</span></div>
+    <div class="ir"><span class="il">EMA 21</span><span class="iv cm" id="i-e21">--</span></div>
+    <div class="ir"><span class="il">RSI</span><span class="iv cy" id="i-rsi">--</span></div>
+    <div class="ir"><span class="il">TREND</span><span class="iv" id="i-trend">--</span></div>
+    <div class="ir"><span class="il">STOP LOSS</span><span class="iv cr" id="i-sl">--</span></div>
+    <div class="ir"><span class="il">TAKE PROFIT</span><span class="iv cg" id="i-tp">--</span></div>
+    <div class="ir"><span class="il">CYCLE</span><span class="iv cm" id="i-cyc">--</span></div>
   </div>
 
-  <!-- POSITION -->
   <div class="card">
-    <div class="card-title">Position เปิดอยู่</div>
-    <div id="pos-content">
-      <div class="pos-inner no-p">ยังไม่มี Position</div>
-    </div>
+    <div class="clbl">▸ POSITION</div>
+    <div id="pos-c"><div style="text-align:center;font-size:7px;color:#1a2a1a;padding:10px">NO POSITION</div></div>
   </div>
 
-  <!-- STATS -->
   <div class="card">
-    <div class="card-title">สถิติสะสม</div>
-    <div class="stats-grid">
-      <div class="stat-box">
-        <div class="stat-num cg" id="s-wr">--%</div>
-        <div class="stat-lbl">WIN RATE</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-num cy" id="s-total">--</div>
-        <div class="stat-lbl">TRADES</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-num" id="s-pnl">--</div>
-        <div class="stat-lbl">P&L USDT</div>
-      </div>
+    <div class="clbl">▸ STATS</div>
+    <div class="g3" style="margin-bottom:8px">
+      <div class="mini" style="text-align:center"><div class="mval cg" id="s-wr">--%</div><div class="mlbl" style="margin-top:3px">WIN</div></div>
+      <div class="mini" style="text-align:center"><div class="mval cy" id="s-tot">--</div><div class="mlbl" style="margin-top:3px">TRADES</div></div>
+      <div class="mini" style="text-align:center"><div class="mval" id="s-pnl">--</div><div class="mlbl" style="margin-top:3px">P&L</div></div>
     </div>
-    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div class="stat-box">
-        <div class="stat-num cg" id="s-wins">--</div>
-        <div class="stat-lbl">TP WIN</div>
-      </div>
-      <div class="stat-box">
-        <div class="stat-num cr" id="s-losses">--</div>
-        <div class="stat-lbl">SL LOSS</div>
-      </div>
+    <div class="g2">
+      <div class="mini" style="text-align:center"><div class="mval cg" id="s-w">0</div><div class="mlbl" style="margin-top:3px">TP WIN</div></div>
+      <div class="mini" style="text-align:center"><div class="mval cr" id="s-l">0</div><div class="mlbl" style="margin-top:3px">SL LOSS</div></div>
     </div>
   </div>
 
-  <!-- TRADE HISTORY -->
   <div class="card">
-    <div class="card-title" style="display:flex;justify-content:space-between">
-      <span>ประวัติการเทรด</span>
-      <span class="cm" id="trade-count">0 trades</span>
-    </div>
-    <div id="trade-list">
-      <div style="text-align:center;padding:16px;color:#1a2a1a;font-size:12px">ยังไม่มีประวัติ</div>
-    </div>
+    <div class="clbl" style="display:flex;justify-content:space-between">▸ TRADES<span class="cm" id="tc">×0</span></div>
+    <div id="tlist"><div style="text-align:center;font-size:6px;color:#1a2a1a;padding:12px">NO TRADES YET</div></div>
   </div>
 
-  <button class="refresh-btn" onclick="fetchAll()">🔄 รีเฟรชข้อมูล</button>
-  <div class="last-update" id="last-update"></div>
+  <button class="rfbtn" onclick="fetchAll()">▶ REFRESH DATA</button>
+  <div style="text-align:center;font-size:6px;color:#1a2a1a;padding:6px" id="lupd">AUTO REFRESH: 5 MIN</div>
 
 </div>
 
 <script>
+// ═══════════════════════════════════════════
+//  CONFIG
+// ═══════════════════════════════════════════
 const OWNER = 'wananbee-1198';
 const REPO  = 'nexus-gold-bot';
 const RAW   = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main`;
 
-function fmt(n, d=2) {
-  if (n == null) return '--';
-  return parseFloat(n).toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+// ═══════════════════════════════════════════
+//  CANVAS PIXEL ART ROOM
+// ═══════════════════════════════════════════
+const cv  = document.getElementById('gc');
+const ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+
+let W = 0, H = 0, TW = 32, TH = 16;
+const COLS = 9, ROWS = 6;
+let OX = 0, OY = 0;
+
+function resize() {
+  W = cv.width  = window.innerWidth;
+  H = cv.height = Math.round(window.innerWidth * 0.55);
+  cv.style.height = H + 'px';
+  document.getElementById('canvas-wrap').style.height = H + 'px';
+  const sc = Math.min(W * 0.9 / ((COLS+ROWS)*16), H * 0.82 / ((COLS+ROWS)*8 + 60));
+  TW = Math.round(32 * sc); TH = Math.round(16 * sc);
+  OX = Math.round(W / 2); OY = Math.round(TH * 4.5 + 10);
 }
 
-async function fetchGitHub(path) {
-  // ใช้ raw URL + timestamp เพื่อหลีกเลี่ยง cache
-  const url = `${RAW}/${path}?nocache=${Date.now()}`;
-  const r = await fetch(url, { cache: 'no-store' });
-  if (!r.ok) throw new Error(r.status);
-  return r.json();
+function iso(c, r) {
+  return { x: Math.round(OX+(c-r)*TW/2), y: Math.round(OY+(c+r)*TH/2) };
 }
+
+const AGENTS = [
+  { id:'leo',  emoji:'🦁', col:1,   row:0.8, suit:'#0a2060', neon:'#00e5ff', name:'LEO',  role:'ALPHA' },
+  { id:'eli',  emoji:'🐘', col:6.5, row:0.5, suit:'#003320', neon:'#00ff88', name:'ELI',  role:'SIGMA' },
+  { id:'gigi', emoji:'🦒', col:3.5, row:2.8, suit:'#2a1800', neon:'#ffe600', name:'GIGI', role:'DELTA' },
+  { id:'tora', emoji:'🐯', col:1,   row:4.8, suit:'#300010', neon:'#ff4d8b', name:'TORA', role:'OMEGA' },
+  { id:'kiki', emoji:'🦜', col:6.5, row:4.2, suit:'#1a0840', neon:'#bf5fff', name:'KIKI', role:'GAMMA' },
+];
+
+const MSGS = {
+  leo:  {BUY:['CROSSOVER↑','BUY SIGNAL!'],SELL:['CROSSOVER↓','SELL!'],HOLD:['SCANNING..','WAIT..']},
+  eli:  {BUY:['RSI OK ✓','CONF:88%'],SELL:['OVERBOUGHT','SELL CONF'],HOLD:['CALC EMA..','ANALYZE..']},
+  gigi: {BUY:['SL/TP SET','APPROVE!'],SELL:['RISK OK','APPROVED'],HOLD:['CHECK R:R','STANDBY']},
+  tora: {BUY:['BUY! 🚀','EXECUTING'],SELL:['SELL! ⚡','ORDER GO!'],HOLD:['STANDBY..','READY.']},
+  kiki: {BUY:['NOTIFY!','LINE SENT'],SELL:['ALERT!','MSG SENT'],HOLD:['SYNC..','RELAY..']},
+};
+
+let bubbles = {}, msgT = {}, curSig = 'HOLD', tick = 0, activeIdx = 0;
+let priceHist = [], rsiVal = 0;
+
+AGENTS.forEach(a => { bubbles[a.id] = MSGS[a.id].HOLD[0]; });
+
+function rotateMsgs(sig) {
+  if (sig === curSig) return; curSig = sig;
+  AGENTS.forEach(a => {
+    const msgs = MSGS[a.id][sig] || MSGS[a.id].HOLD;
+    let i = 0; bubbles[a.id] = msgs[0];
+    clearInterval(msgT[a.id]);
+    msgT[a.id] = setInterval(() => { i=(i+1)%msgs.length; bubbles[a.id]=msgs[i]; }, 2800);
+  });
+}
+
+function drawRoom() {
+  const wh = 4 * TH;
+  // back wall
+  for (let c=0;c<COLS;c++) {
+    const p0=iso(c,0), p1=iso(c+1,0);
+    ctx.fillStyle = c%2===0?'#060614':'#050510';
+    ctx.beginPath(); ctx.moveTo(p0.x,p0.y); ctx.lineTo(p1.x,p1.y);
+    ctx.lineTo(p1.x,p1.y-wh); ctx.lineTo(p0.x,p0.y-wh); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#0a0a20'; ctx.lineWidth=.5; ctx.stroke();
+    if (c===2||c===5||c===7) {
+      const wx=(p0.x+p1.x)/2, wy=p0.y-wh*.65, ww=TW*.5, wh2=wh*.38;
+      ctx.fillStyle='#020a0e'; ctx.fillRect(wx-ww/2,wy,ww,wh2);
+      ctx.strokeStyle=(c===5?'#00ff88':c===2?'#00e5ff':'#ffe600')+'80'; ctx.lineWidth=.8; ctx.strokeRect(wx-ww/2,wy,ww,wh2);
+      ctx.font=`${Math.max(5,TW*.12)}px 'Press Start 2P',monospace`;
+      ctx.fillStyle=(c===5?'#00ff88':c===2?'#00e5ff':'#ffe600')+'cc'; ctx.textAlign='center';
+      if(c===5) ctx.fillText(priceHist.length?priceHist[priceHist.length-1].toFixed(0):'----',wx,wy+wh2/2);
+      if(c===2) ctx.fillText(curSig,wx,wy+wh2/2);
+      if(c===7) ctx.fillText(rsiVal?rsiVal.toFixed(0):'--',wx,wy+wh2/2);
+    }
+  }
+  // left wall
+  for (let r=0;r<ROWS;r++) {
+    const p0=iso(0,r), p1=iso(0,r+1);
+    ctx.fillStyle=r%2===0?'#050510':'#04040c';
+    ctx.beginPath(); ctx.moveTo(p0.x,p0.y); ctx.lineTo(p1.x,p1.y);
+    ctx.lineTo(p1.x,p1.y-wh); ctx.lineTo(p0.x,p0.y-wh); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#0a0a1a'; ctx.lineWidth=.5; ctx.stroke();
+  }
+  // floor
+  for (let r=0;r<ROWS;r++) for (let c=0;c<COLS;c++) {
+    const p=[iso(c,r),iso(c+1,r),iso(c+1,r+1),iso(c,r+1)];
+    ctx.fillStyle=(c+r)%2===0?'#08081a':'#060614';
+    ctx.beginPath(); p.forEach((pt,i)=>i===0?ctx.moveTo(pt.x,pt.y):ctx.lineTo(pt.x,pt.y));
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(0,255,136,.03)'; ctx.lineWidth=.4; ctx.stroke();
+  }
+  // NEXUS sign
+  const ns=iso(3.5,0);
+  ctx.font=`${Math.max(6,TW*.15)}px 'Press Start 2P',monospace`;
+  ctx.fillStyle='#00ff88cc'; ctx.shadowColor='#00ff88'; ctx.shadowBlur=8;
+  ctx.textAlign='center'; ctx.fillText('NEXUS.AI',ns.x,ns.y-wh*1.15); ctx.shadowBlur=0;
+}
+
+function drawDesk(a) {
+  const {col,row,suit,neon}=a;
+  const p00=iso(col,row),p10=iso(col+2,row),p11=iso(col+2,row+1.4),p01=iso(col,row+1.4);
+  const dh=TH*.55;
+  ctx.fillStyle=suit+'cc'; ctx.beginPath(); [p00,p10,p11,p01].forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y)); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=neon+'30'; ctx.lineWidth=.5; ctx.stroke();
+  // desk front
+  ctx.fillStyle=suit+'88';
+  ctx.beginPath(); ctx.moveTo(p01.x,p01.y); ctx.lineTo(p11.x,p11.y);
+  ctx.lineTo(p11.x,p11.y+dh); ctx.lineTo(p01.x,p01.y+dh); ctx.closePath(); ctx.fill();
+  // monitor
+  const mp=iso(col+0.8,row+0.4), mw=TW*.7, mh=TH*1.3;
+  const mx=mp.x-mw/2, my=mp.y-TH*.55-mh;
+  ctx.fillStyle='#111118'; ctx.fillRect(mx-1.5,my-1.5,mw+3,mh+3);
+  ctx.fillStyle='#04040c'; ctx.fillRect(mx,my,mw,mh);
+  if(priceHist.length>2){
+    const data=priceHist.slice(-Math.floor(mw/1.5));
+    const mn=Math.min(...data),mx2=Math.max(...data),rng=mx2-mn||1;
+    const py=v=>my+mh-2-((v-mn)/rng)*(mh-4), px=i=>mx+(i/(data.length-1))*mw;
+    ctx.beginPath(); data.forEach((v,i)=>i===0?ctx.moveTo(px(i),py(v)):ctx.lineTo(px(i),py(v)));
+    ctx.strokeStyle=neon+'aa'; ctx.lineWidth=.8; ctx.stroke();
+  }
+  ctx.strokeStyle=neon+'50'; ctx.lineWidth=.8; ctx.strokeRect(mx,my,mw,mh);
+  ctx.font=`${Math.max(4,TW*.09)}px 'Press Start 2P',monospace`;
+  ctx.fillStyle=neon+'cc'; ctx.textAlign='center'; ctx.fillText(a.name,mx+mw/2,my+mh-3);
+}
+
+function drawChar(a) {
+  const p=iso(a.col+0.9,a.row+1.0), px=p.x, py=p.y;
+  const s=Math.max(2,Math.round(TH*.18));
+  const isAct=AGENTS[activeIdx].id===a.id;
+  if(isAct){const g=ctx.createRadialGradient(px,py-s*9,0,px,py-s*9,s*8);g.addColorStop(0,a.neon+'30');g.addColorStop(1,'transparent');ctx.fillStyle=g;ctx.fillRect(px-s*8,py-s*17,s*16,s*16);}
+  // shadow
+  ctx.fillStyle='rgba(0,0,0,.25)'; ctx.beginPath(); ctx.ellipse(px,py,s*4,s*1.5,0,0,Math.PI*2); ctx.fill();
+  // legs
+  ctx.fillStyle='#0a0a18'; ctx.fillRect(px-s*2.5,py-s*5,s*2,s*5); ctx.fillRect(px+s*.5,py-s*5,s*2,s*5);
+  ctx.fillStyle=a.neon+'aa'; ctx.fillRect(px-s*3,py-s*1.5,s*3.5,s*1.5); ctx.fillRect(px+s*.2,py-s*1.5,s*3.5,s*1.5);
+  // body
+  ctx.fillStyle=a.suit; ctx.beginPath(); ctx.roundRect(px-s*3.5,py-s*14,s*7,s*10,s); ctx.fill();
+  ctx.fillStyle='#d0c8e8'; ctx.fillRect(px-s*.8,py-s*13,s*1.6,s*7);
+  ctx.fillStyle=a.neon+'aa'; ctx.fillRect(px-s*.4,py-s*12,s*.8,s*5);
+  // arms
+  ctx.fillStyle=a.suit; ctx.fillRect(px-s*5,py-s*13,s*1.5,s*7); ctx.fillRect(px+s*3.5,py-s*13,s*1.5,s*7);
+  ctx.fillStyle='#c8b090'; ctx.beginPath(); ctx.arc(px-s*4.2,py-s*6,s*1.2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(px+s*4.2,py-s*6,s*1.2,0,Math.PI*2); ctx.fill();
+  // head
+  const hg=ctx.createRadialGradient(px-s*.5,py-s*17,s,px,py-s*16,s*5.5);
+  hg.addColorStop(0,'#f5e8d0'); hg.addColorStop(1,'#d4b888');
+  ctx.fillStyle=hg; ctx.shadowColor=a.neon; ctx.shadowBlur=isAct?12:5;
+  ctx.beginPath(); ctx.arc(px,py-s*16,s*5.5,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+  ctx.strokeStyle=a.neon+'80'; ctx.lineWidth=.8; ctx.beginPath(); ctx.arc(px,py-s*16,s*5.5,0,Math.PI*2); ctx.stroke();
+  ctx.font=`${Math.max(10,s*6)}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(a.emoji,px,py-s*16);
+  // name tag
+  const nw=a.name.length*s*3.2+s*4;
+  ctx.fillStyle='#000a04'; ctx.strokeStyle=a.neon+'60'; ctx.lineWidth=.8;
+  ctx.fillRect(px-nw/2,py+s,nw,s*6); ctx.strokeRect(px-nw/2,py+s,nw,s*6);
+  ctx.font=`${Math.max(4,s*3)}px 'Press Start 2P',monospace`;
+  ctx.fillStyle=a.neon; ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText(a.name,px,py+s*1.8);
+}
+
+function drawBubble(a) {
+  const p=iso(a.col+0.9,a.row+1.0), px=p.x, py=p.y;
+  const s=Math.max(2,Math.round(TH*.18));
+  const txt=bubbles[a.id]||'...';
+  const bw=Math.max(60,txt.length*s*3+s*5), bh=s*10;
+  const bx=px-bw/2, by=py-s*38;
+  ctx.fillStyle='rgba(2,4,10,.92)'; ctx.strokeStyle=a.neon+'aa'; ctx.lineWidth=.8;
+  ctx.fillRect(bx,by,bw,bh); ctx.strokeRect(bx,by,bw,bh);
+  ctx.fillStyle='rgba(2,4,10,.92)'; ctx.beginPath(); ctx.moveTo(px-s,by+bh); ctx.lineTo(px+s,by+bh); ctx.lineTo(px,by+bh+s*3); ctx.closePath(); ctx.fill();
+  ctx.font=`${Math.max(4,s*2.8)}px 'Press Start 2P',monospace`;
+  ctx.fillStyle=a.neon; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(txt,px,by+bh/2);
+}
+
+function render() {
+  tick++;
+  if(tick%120===0) activeIdx=(activeIdx+1)%AGENTS.length;
+  ctx.clearRect(0,0,W,H);
+  const bg=ctx.createLinearGradient(0,0,0,H); bg.addColorStop(0,'#030306'); bg.addColorStop(1,'#050508');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,W,H);
+  drawRoom();
+  [...AGENTS].sort((a,b)=>(a.col+a.row)-(b.col+b.row)).forEach(a=>{drawDesk(a);drawChar(a);drawBubble(a);});
+  // vignette
+  const v=ctx.createRadialGradient(W/2,H/2,H*.25,W/2,H/2,H*.75);
+  v.addColorStop(0,'transparent'); v.addColorStop(1,'rgba(0,0,0,.55)');
+  ctx.fillStyle=v; ctx.fillRect(0,0,W,H);
+  requestAnimationFrame(render);
+}
+
+// ═══════════════════════════════════════════
+//  DATA FETCH
+// ═══════════════════════════════════════════
+function fmt(n,d=2){return n!=null?parseFloat(n).toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g,','):'--';}
 
 async function fetchAll() {
-  document.getElementById('refresh-hint').innerHTML = '<span class="spinner"></span>กำลังโหลด...';
+  document.getElementById('rfbtn')?.setAttribute('disabled','');
+  document.getElementById('lupd').innerHTML='<span class="spinner"></span> LOADING...';
   try {
-    const [state, tradesData] = await Promise.all([
-      fetchGitHub('state.json'),
-      fetchGitHub('trades.json'),
+    const t = Date.now();
+    const [sr, tr] = await Promise.all([
+      fetch(`${RAW}/state.json?_=${t}`,{cache:'no-store'}),
+      fetch(`${RAW}/trades.json?_=${t}`,{cache:'no-store'}),
     ]);
-    renderState(state);
-    renderTrades(tradesData.trades || []);
-    document.getElementById('conn-pill').className = 'pill pill-live';
-    document.getElementById('conn-pill').textContent = '● LIVE';
-    const now = new Date().toLocaleTimeString('th-TH', {hour12:false});
-    document.getElementById('refresh-hint').textContent = `อัปเดตล่าสุด: ${now}`;
-    document.getElementById('last-update').textContent = `ข้อมูล ณ ${now} · อัตโนมัติทุก 5 นาที`;
+    const state  = await sr.json();
+    const trades = (await tr.json()).trades || [];
+    applyState(state);
+    applyTrades(trades);
+    document.getElementById('cpill').className='pill pill-live';
+    document.getElementById('cpill').textContent='● LIVE';
+    const now=new Date().toLocaleTimeString('th-TH',{hour12:false,hour:'2-digit',minute:'2-digit'});
+    document.getElementById('upd').textContent=now;
+    document.getElementById('lupd').textContent=`LAST UPDATE: ${now} · AUTO 5 MIN`;
   } catch(e) {
-    document.getElementById('conn-pill').className = 'pill pill-off';
-    document.getElementById('conn-pill').textContent = '● OFFLINE';
-    document.getElementById('refresh-hint').textContent = 'โหลดไม่สำเร็จ กดรีเฟรช';
+    document.getElementById('cpill').className='pill pill-off';
+    document.getElementById('cpill').textContent='● OFF';
+    document.getElementById('lupd').textContent='LOAD FAILED — TAP REFRESH';
   }
+  document.getElementById('rfbtn')?.removeAttribute('disabled');
 }
 
-function renderState(s) {
-  if (!s) return;
-  const price = s.price || 0;
-  const sig   = s.signal || 'HOLD';
-  const conf  = s.confidence || 0;
+function applyState(s) {
+  if(!s) return;
+  const price=s.price||0, sig=s.signal||'HOLD', conf=s.confidence||0;
+  rsiVal=parseFloat(s.rsi||50);
+  if(price>0){priceHist.push(price);if(priceHist.length>100)priceHist.shift();}
+  rotateMsgs(sig);
 
-  // Price
-  document.getElementById('price').textContent = fmt(price);
-  const rsi = s.rsi ? parseFloat(s.rsi) : 50;
-  document.getElementById('price-sub').textContent =
-    `XAUTUSDT · RSI ${rsi.toFixed(1)} · Cycle #${s.cycle||0}`;
-  document.getElementById('price-sub').style.color =
-    rsi > 65 ? '#ff4d8b' : rsi < 35 ? '#00ff88' : '#1a3a1a';
+  document.getElementById('p-price').textContent=fmt(price);
+  document.getElementById('p-sub').textContent=`XAUTUSDT · RSI ${rsiVal.toFixed(1)} · CYC#${s.cycle||0}`;
+  document.getElementById('p-sub').style.color=rsiVal>65?'#ff4d8b':rsiVal<35?'#00ff88':'#1a3a1a';
 
-  // Signal
-  document.getElementById('sig-box').className = `sig-box ${sig}`;
-  document.getElementById('sig-txt').textContent = sig;
-  document.getElementById('sig-txt').className = `sig-txt ${sig}`;
-  document.getElementById('sig-conf').textContent = `Confidence: ${conf}%`;
-  document.getElementById('sig-reason').textContent = (s.reason || '--').replace(/\|/g, ' · ');
+  document.getElementById('sig-box').className=`sig-box ${sig}`;
+  document.getElementById('sig-txt').textContent=sig;
+  document.getElementById('sig-txt').className=`sig-txt ${sig}`;
+  document.getElementById('sig-sub').textContent=`CONF: ${conf}%`;
+  document.getElementById('sig-reason').textContent=(s.reason||'--').toUpperCase();
 
-  // Balance
-  document.getElementById('bal-usdt').textContent = fmt(s.balance_usdt || 0) + ' USDT';
-  document.getElementById('bal-xaut').textContent = fmt(s.balance_xaut || 0, 6);
+  document.getElementById('b-usdt').textContent=fmt(s.balance_usdt||0)+' USDT';
+  document.getElementById('b-xaut').textContent=fmt(s.balance_xaut||0,6);
+  document.getElementById('i-e9').textContent=s.ema_fast?fmt(s.ema_fast):'--';
+  document.getElementById('i-e21').textContent=s.ema_slow?fmt(s.ema_slow):'--';
+  const ri=document.getElementById('i-rsi'); ri.textContent=rsiVal.toFixed(1);
+  ri.style.color=rsiVal>65?'#ff4d8b':rsiVal<35?'#00ff88':'#ffe600';
+  const te=document.getElementById('i-trend');
+  te.textContent=s.trend==='UP'?'▲ UP':s.trend==='DOWN'?'▼ DOWN':'--';
+  te.style.color=s.trend==='UP'?'#00ff88':s.trend==='DOWN'?'#ff4d8b':'#1a3a1a';
+  document.getElementById('i-sl').textContent=s.sl?fmt(s.sl):'--';
+  document.getElementById('i-tp').textContent=s.tp?fmt(s.tp):'--';
+  document.getElementById('i-cyc').textContent=s.cycle||'--';
 
-  // Indicators
-  document.getElementById('i-e9').textContent    = s.ema_fast ? fmt(s.ema_fast) : '--';
-  document.getElementById('i-e21').textContent   = s.ema_slow ? fmt(s.ema_slow) : '--';
-  const rsiEl = document.getElementById('i-rsi');
-  rsiEl.textContent = rsi.toFixed(1);
-  rsiEl.style.color = rsi > 65 ? '#ff4d8b' : rsi < 35 ? '#00ff88' : '#ffe600';
-  const tEl = document.getElementById('i-trend');
-  tEl.textContent = s.trend === 'UP' ? '▲ ขาขึ้น' : s.trend === 'DOWN' ? '▼ ขาลง' : '--';
-  tEl.style.color = s.trend === 'UP' ? '#00ff88' : s.trend === 'DOWN' ? '#ff4d8b' : '#1a3a1a';
-  document.getElementById('i-sl').textContent    = s.sl ? fmt(s.sl) : '--';
-  document.getElementById('i-tp').textContent    = s.tp ? fmt(s.tp) : '--';
-  document.getElementById('i-cycle').textContent = s.cycle || '--';
-
-  // Position
-  const posEl = document.getElementById('pos-content');
-  const pos = s.open_position || s.position;
-  if (pos) {
-    const isUp = pos.side === 'BUY';
-    const pnl  = isUp ? (price - pos.entry) * pos.quantity
-                      : (pos.entry - price) * pos.quantity;
-    posEl.innerHTML = `
-      <div class="pos-inner ${isUp ? 'buy-p' : 'sell-p'}">
-        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
-          <span style="font-weight:700;color:${isUp?'#00ff88':'#ff4d8b'};font-size:16px">${pos.side}</span>
-          <span class="trade-pnl" style="color:${pnl>=0?'#00ff88':'#ff4d8b'}">${pnl>=0?'+':''}${pnl.toFixed(4)} USDT</span>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;color:#1a3a1a">
-          <div>เข้า <span style="color:#e0e8ff;font-family:'JetBrains Mono',monospace">${fmt(pos.entry)}</span></div>
-          <div>ปัจจุบัน <span style="color:#ffe600;font-family:'JetBrains Mono',monospace">${fmt(price)}</span></div>
-          <div>SL <span style="color:#ff4d8b;font-family:'JetBrains Mono',monospace">${fmt(pos.sl)}</span></div>
-          <div>TP <span style="color:#00ff88;font-family:'JetBrains Mono',monospace">${fmt(pos.tp)}</span></div>
-        </div>
-      </div>`;
+  // position
+  const posEl=document.getElementById('pos-c'), pos=s.open_position||s.position;
+  if(pos){
+    const isUp=pos.side==='BUY', pnl=isUp?(price-pos.entry)*pos.quantity:(pos.entry-price)*pos.quantity;
+    posEl.innerHTML=`<div style="background:${isUp?'#001a08':'#1a0008'};border:1px solid ${isUp?'#00ff8840':'#ff4d8b40'};border-radius:6px;padding:10px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+        <span style="color:${isUp?'#00ff88':'#ff4d8b'};font-size:10px">${pos.side}</span>
+        <span style="color:${pnl>=0?'#00ff88':'#ff4d8b'};font-size:9px">${pnl>=0?'+':''}${pnl.toFixed(4)}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;font-size:6px;color:#1a3a1a">
+        <div>IN <span style="color:#e0e8ff">${fmt(pos.entry)}</span></div>
+        <div>NOW <span style="color:#ffe600">${fmt(price)}</span></div>
+        <div>SL <span style="color:#ff4d8b">${fmt(pos.sl)}</span></div>
+        <div>TP <span style="color:#00ff88">${fmt(pos.tp)}</span></div>
+      </div></div>`;
   } else {
-    posEl.innerHTML = '<div class="pos-inner no-p">ยังไม่มี Position</div>';
+    posEl.innerHTML='<div style="text-align:center;font-size:7px;color:#1a2a1a;padding:10px">NO POSITION</div>';
   }
+
+  document.getElementById('sb-msg').textContent=
+    `CYC:${s.cycle||0} · ${fmt(price)} · ${sig} ${conf}% · RSI:${rsiVal.toFixed(1)}`;
 }
 
-function renderTrades(trades) {
-  const closed = trades.filter(t => t.result === 'TP' || t.result === 'SL');
-  const wins   = closed.filter(t => t.result === 'TP');
-  const losses = closed.filter(t => t.result === 'SL');
-  const totPnl = closed.reduce((s, t) => s + (t.pnl || 0), 0);
-  const wr     = closed.length ? Math.round(wins.length / closed.length * 100) : 0;
+function applyTrades(trades) {
+  const closed=trades.filter(t=>t.result==='TP'||t.result==='SL');
+  const wins=closed.filter(t=>t.result==='TP'), losses=closed.filter(t=>t.result==='SL');
+  const pnl=closed.reduce((s,t)=>s+(t.pnl||0),0);
+  const wr=closed.length?Math.round(wins.length/closed.length*100):0;
 
-  // Stats
-  document.getElementById('s-wr').textContent     = closed.length ? wr + '%' : '--%';
-  document.getElementById('s-wr').style.color     = wr >= 50 ? '#00ff88' : '#ff4d8b';
-  document.getElementById('s-total').textContent  = closed.length;
-  document.getElementById('s-wins').textContent   = wins.length;
-  document.getElementById('s-losses').textContent = losses.length;
-  const pnlEl = document.getElementById('s-pnl');
-  pnlEl.textContent = closed.length ? (totPnl >= 0 ? '+' : '') + totPnl.toFixed(4) : '--';
-  pnlEl.style.color = totPnl >= 0 ? '#00ff88' : '#ff4d8b';
+  document.getElementById('s-wr').textContent=closed.length?wr+'%':'--%';
+  document.getElementById('s-wr').style.color=wr>=50?'#00ff88':'#ff4d8b';
+  document.getElementById('s-tot').textContent=closed.length;
+  document.getElementById('s-w').textContent=wins.length;
+  document.getElementById('s-l').textContent=losses.length;
+  const pe=document.getElementById('s-pnl');
+  pe.textContent=closed.length?(pnl>=0?'+':'')+pnl.toFixed(4):'--';
+  pe.style.color=pnl>=0?'#00ff88':'#ff4d8b';
 
-  // Trade list
-  document.getElementById('trade-count').textContent = `${trades.length} trades`;
-  const listEl = document.getElementById('trade-list');
-  if (!trades.length) {
-    listEl.innerHTML = '<div style="text-align:center;padding:16px;color:#1a2a1a;font-size:12px">ยังไม่มีประวัติ</div>';
-    return;
-  }
-  listEl.innerHTML = [...trades].reverse().slice(0, 20).map(t => {
-    const pnl = t.pnl || 0;
-    const res = t.result || 'OPEN';
-    return `
-    <div class="trade-item">
-      <div class="trade-header">
-        <div style="display:flex;gap:6px;align-items:center">
-          <span class="side-badge ${t.side.toLowerCase()}">${t.side}</span>
-          <span class="result-badge ${res}">${res}</span>
-          <span style="font-size:10px;color:#1a3a1a">#${t.id}</span>
+  document.getElementById('tc').textContent=`×${trades.length}`;
+  const tl=document.getElementById('tlist');
+  if(!trades.length){tl.innerHTML='<div style="text-align:center;font-size:6px;color:#1a2a1a;padding:12px">NO TRADES YET</div>';return;}
+  tl.innerHTML=[...trades].reverse().slice(0,15).map(t=>{
+    const pnl=t.pnl||0, r=t.result||'OPEN';
+    return `<div class="ti">
+      <div class="ti-top">
+        <div style="display:flex;gap:5px;align-items:center">
+          <span class="badge b-${t.side.toLowerCase()}">${t.side}</span>
+          <span class="badge b-${r}">${r}</span>
+          <span style="font-size:5px;color:#1a2a1a">#${t.id}</span>
         </div>
-        <span class="trade-pnl" style="color:${pnl>=0?'#00ff88':'#ff4d8b'}">${pnl>=0?'+':''}${pnl.toFixed(4)}</span>
+        <span class="ti-pnl" style="color:${pnl>=0?'#00ff88':'#ff4d8b'}">${pnl>=0?'+':''}${pnl.toFixed(4)}</span>
       </div>
-      <div class="trade-detail">
-        <span>เข้า ${fmt(t.entry)}</span>
-        ${t.exit ? `<span>ออก ${fmt(t.exit)}</span>` : ''}
-        ${t.hold_min ? `<span>⏱ ${t.hold_min}m</span>` : ''}
-        <span>Conf ${t.confidence}%</span>
-        <span>RSI ${t.rsi}</span>
+      <div class="ti-det">
+        IN:${fmt(t.entry)} ${t.exit?'OUT:'+fmt(t.exit):''} ${t.hold_min?t.hold_min+'m':''} C:${t.confidence}%
       </div>
-      ${t.entry_time ? `<div style="font-size:9px;color:#1a2a1a;margin-top:3px">${t.entry_time}</div>` : ''}
+      ${t.entry_time?`<div style="font-size:5px;color:#1a1a2a;margin-top:2px">${t.entry_time}</div>`:''}
     </div>`;
   }).join('');
 }
 
-// Auto-refresh ทุก 5 นาที
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+window.addEventListener('resize',()=>{resize();});
+resize();
+render();
 fetchAll();
-setInterval(fetchAll, 5 * 60 * 1000);
+setInterval(fetchAll, 5*60*1000);
 </script>
 </body>
 </html>
