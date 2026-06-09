@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#050508">
+<title>NEXUS GOLD</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:#050508;color:#e0e8ff;font-family:'Inter',sans-serif;min-height:100vh;font-size:14px}
+
+/* TOP BAR */
+.topbar{background:#08080f;border-bottom:1px solid #00ff8830;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.brand{font-weight:700;font-size:15px;color:#00ff88;letter-spacing:1px}
+.brand span{color:#2a4a2a;font-weight:400;font-size:11px;margin-left:6px}
+.pill{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600}
+.pill-live{background:#00200e;color:#00ff88;border:1px solid #00ff8840}
+.pill-off{background:#0a0a14;color:#2a3a2a;border:1px solid #1a1a2a}
+
+/* PULL TO REFRESH */
+.refresh-hint{text-align:center;padding:8px;font-size:11px;color:#1a3a1a}
+
+/* CARDS */
+.container{padding:12px;display:flex;flex-direction:column;gap:10px;max-width:500px;margin:0 auto}
+.card{background:#08080f;border:1px solid #0d1a0d;border-radius:12px;padding:14px 16px}
+.card-title{font-size:9px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:#1a3a1a;margin-bottom:12px}
+
+/* PRICE HERO */
+.price-big{font-family:'JetBrains Mono',monospace;font-size:36px;font-weight:600;color:#ffe600;line-height:1;text-shadow:0 0 20px #ffe60040}
+.price-sub{font-size:11px;margin-top:6px}
+
+/* SIGNAL BOX */
+.sig-box{border-radius:8px;padding:12px;text-align:center;margin-bottom:10px}
+.sig-box.BUY{background:#001a08;border:1px solid #00ff8840}
+.sig-box.SELL{background:#1a0008;border:1px solid #ff4d8b40}
+.sig-box.HOLD{background:#1a1400;border:1px solid #ffe60040}
+.sig-txt{font-size:24px;font-weight:700;letter-spacing:4px}
+.sig-txt.BUY{color:#00ff88}
+.sig-txt.SELL{color:#ff4d8b}
+.sig-txt.HOLD{color:#ffe600}
+.sig-conf{font-size:11px;color:#2a4a2a;margin-top:4px}
+
+/* GRID */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mini-card{background:#060610;border:1px solid #0d100d;border-radius:8px;padding:10px 12px}
+.mc-label{font-size:9px;color:#1a2a1a;letter-spacing:1px;text-transform:uppercase;margin-bottom:4px}
+.mc-val{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:600}
+
+/* INDICATOR ROWS */
+.ind-row{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #0a0a14}
+.ind-row:last-child{border-bottom:none}
+.ind-lbl{font-size:11px;color:#1a2a1a}
+.ind-val{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:600}
+
+/* POSITION CARD */
+.pos-inner{border-radius:8px;padding:10px 12px}
+.pos-inner.buy-p{background:#001a08;border:1px solid #00ff8830}
+.pos-inner.sell-p{background:#1a0008;border:1px solid #ff4d8b30}
+.pos-inner.no-p{background:#0a0a14;text-align:center;padding:14px;color:#1a2a2a;font-size:12px}
+
+/* TRADE LIST */
+.trade-item{padding:10px 0;border-bottom:1px solid #0a0a14}
+.trade-item:last-child{border-bottom:none}
+.trade-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.side-badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700}
+.side-badge.buy{background:#001a08;color:#00ff88;border:1px solid #00ff8830}
+.side-badge.sell{background:#1a0008;color:#ff4d8b;border:1px solid #ff4d8b30}
+.result-badge{padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600}
+.result-badge.TP{background:#001a08;color:#00ff88}
+.result-badge.SL{background:#1a0008;color:#ff4d8b}
+.result-badge.OPEN{background:#1a1400;color:#ffe600}
+.trade-detail{font-size:10px;color:#2a3a2a;display:flex;gap:10px;flex-wrap:wrap}
+.trade-pnl{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600}
+
+/* STATS GRID */
+.stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.stat-box{background:#060610;border:1px solid #0d100d;border-radius:8px;padding:8px 10px;text-align:center}
+.stat-num{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:600}
+.stat-lbl{font-size:9px;color:#1a2a1a;margin-top:2px}
+
+/* LAST UPDATE */
+.last-update{text-align:center;font-size:10px;color:#1a2a1a;padding:8px}
+.spinner{display:inline-block;width:10px;height:10px;border:1.5px solid #1a3a1a;border-top-color:#00ff88;border-radius:50%;animation:spin .8s linear infinite;margin-right:4px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* COLOR */
+.cg{color:#00ff88}.cy{color:#ffe600}.cr{color:#ff4d8b}.cb{color:#00e5ff}.cm{color:#1a3a1a}
+
+/* REFRESH BTN */
+.refresh-btn{width:100%;padding:12px;background:#00ff8812;border:1px solid #00ff8830;border-radius:8px;color:#00ff88;font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;margin-top:4px}
+.refresh-btn:active{background:#00ff8820}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">⚡ NEXUS GOLD<span>AI Bot</span></div>
+  <div class="pill pill-off" id="conn-pill">● OFFLINE</div>
+</div>
+
+<div class="refresh-hint" id="refresh-hint">อัปเดตล่าสุด: --:--:--</div>
+
+<div class="container">
+
+  <!-- PRICE -->
+  <div class="card">
+    <div class="card-title">ราคาทองคำ</div>
+    <div class="price-big" id="price">--,---.--</div>
+    <div class="price-sub" id="price-sub" style="color:#1a3a1a">XAUTUSDT</div>
+  </div>
+
+  <!-- SIGNAL -->
+  <div class="card">
+    <div class="card-title">AI Signal</div>
+    <div class="sig-box HOLD" id="sig-box">
+      <div class="sig-txt HOLD" id="sig-txt">HOLD</div>
+      <div class="sig-conf" id="sig-conf">Confidence: 0%</div>
+    </div>
+    <div style="font-size:11px;color:#1a3a1a;line-height:1.6" id="sig-reason">รอข้อมูล...</div>
+  </div>
+
+  <!-- PORTFOLIO -->
+  <div class="grid2">
+    <div class="mini-card">
+      <div class="mc-label">USDT</div>
+      <div class="mc-val cy" id="bal-usdt">--</div>
+    </div>
+    <div class="mini-card">
+      <div class="mc-label">XAUT</div>
+      <div class="mc-val cb" id="bal-xaut">--</div>
+    </div>
+  </div>
+
+  <!-- INDICATORS -->
+  <div class="card">
+    <div class="card-title">Indicators</div>
+    <div class="ind-row"><span class="ind-lbl">EMA 9</span><span class="ind-val cb" id="i-e9">--</span></div>
+    <div class="ind-row"><span class="ind-lbl">EMA 21</span><span class="ind-val cm" id="i-e21">--</span></div>
+    <div class="ind-row"><span class="ind-lbl">RSI (14)</span><span class="ind-val cy" id="i-rsi">--</span></div>
+    <div class="ind-row"><span class="ind-lbl">Trend</span><span class="ind-val" id="i-trend">--</span></div>
+    <div class="ind-row"><span class="ind-lbl">Stop Loss</span><span class="ind-val cr" id="i-sl">--</span></div>
+    <div class="ind-row"><span class="ind-lbl">Take Profit</span><span class="ind-val cg" id="i-tp">--</span></div>
+    <div class="ind-row"><span class="ind-lbl">Cycle</span><span class="ind-val cm" id="i-cycle">--</span></div>
+  </div>
+
+  <!-- POSITION -->
+  <div class="card">
+    <div class="card-title">Position เปิดอยู่</div>
+    <div id="pos-content">
+      <div class="pos-inner no-p">ยังไม่มี Position</div>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="card">
+    <div class="card-title">สถิติสะสม</div>
+    <div class="stats-grid">
+      <div class="stat-box">
+        <div class="stat-num cg" id="s-wr">--%</div>
+        <div class="stat-lbl">WIN RATE</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num cy" id="s-total">--</div>
+        <div class="stat-lbl">TRADES</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num" id="s-pnl">--</div>
+        <div class="stat-lbl">P&L USDT</div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div class="stat-box">
+        <div class="stat-num cg" id="s-wins">--</div>
+        <div class="stat-lbl">TP WIN</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num cr" id="s-losses">--</div>
+        <div class="stat-lbl">SL LOSS</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRADE HISTORY -->
+  <div class="card">
+    <div class="card-title" style="display:flex;justify-content:space-between">
+      <span>ประวัติการเทรด</span>
+      <span class="cm" id="trade-count">0 trades</span>
+    </div>
+    <div id="trade-list">
+      <div style="text-align:center;padding:16px;color:#1a2a1a;font-size:12px">ยังไม่มีประวัติ</div>
+    </div>
+  </div>
+
+  <button class="refresh-btn" onclick="fetchAll()">🔄 รีเฟรชข้อมูล</button>
+  <div class="last-update" id="last-update"></div>
+
+</div>
+
+<script>
+const OWNER = 'wananbee-1198';
+const REPO  = 'nexus-gold-bot';
+const RAW   = `https://raw.githubusercontent.com/${OWNER}/${REPO}/main`;
+
+function fmt(n, d=2) {
+  if (n == null) return '--';
+  return parseFloat(n).toFixed(d).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+async function fetchJSON(path) {
+  const r = await fetch(`${RAW}/${path}?t=${Date.now()}`);
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+async function fetchAll() {
+  document.getElementById('refresh-hint').innerHTML = '<span class="spinner"></span>กำลังโหลด...';
+  try {
+    const [state, tradesData] = await Promise.all([
+      fetchJSON('state.json'),
+      fetchJSON('trades.json'),
+    ]);
+    renderState(state);
+    renderTrades(tradesData.trades || []);
+    document.getElementById('conn-pill').className = 'pill pill-live';
+    document.getElementById('conn-pill').textContent = '● LIVE';
+    const now = new Date().toLocaleTimeString('th-TH', {hour12:false});
+    document.getElementById('refresh-hint').textContent = `อัปเดตล่าสุด: ${now}`;
+    document.getElementById('last-update').textContent = `ข้อมูล ณ ${now} · อัตโนมัติทุก 5 นาที`;
+  } catch(e) {
+    document.getElementById('conn-pill').className = 'pill pill-off';
+    document.getElementById('conn-pill').textContent = '● OFFLINE';
+    document.getElementById('refresh-hint').textContent = 'โหลดไม่สำเร็จ กดรีเฟรช';
+  }
+}
+
+function renderState(s) {
+  if (!s) return;
+  const price = s.price || 0;
+  const sig   = s.signal || 'HOLD';
+  const conf  = s.confidence || 0;
+
+  // Price
+  document.getElementById('price').textContent = fmt(price);
+  const rsi = s.rsi ? parseFloat(s.rsi) : 50;
+  document.getElementById('price-sub').textContent =
+    `XAUTUSDT · RSI ${rsi.toFixed(1)} · Cycle #${s.cycle||0}`;
+  document.getElementById('price-sub').style.color =
+    rsi > 65 ? '#ff4d8b' : rsi < 35 ? '#00ff88' : '#1a3a1a';
+
+  // Signal
+  document.getElementById('sig-box').className = `sig-box ${sig}`;
+  document.getElementById('sig-txt').textContent = sig;
+  document.getElementById('sig-txt').className = `sig-txt ${sig}`;
+  document.getElementById('sig-conf').textContent = `Confidence: ${conf}%`;
+  document.getElementById('sig-reason').textContent = (s.reason || '--').replace(/\|/g, ' · ');
+
+  // Balance
+  document.getElementById('bal-usdt').textContent = fmt(s.balance_usdt || 0) + ' USDT';
+  document.getElementById('bal-xaut').textContent = fmt(s.balance_xaut || 0, 6);
+
+  // Indicators
+  document.getElementById('i-e9').textContent    = s.ema_fast ? fmt(s.ema_fast) : '--';
+  document.getElementById('i-e21').textContent   = s.ema_slow ? fmt(s.ema_slow) : '--';
+  const rsiEl = document.getElementById('i-rsi');
+  rsiEl.textContent = rsi.toFixed(1);
+  rsiEl.style.color = rsi > 65 ? '#ff4d8b' : rsi < 35 ? '#00ff88' : '#ffe600';
+  const tEl = document.getElementById('i-trend');
+  tEl.textContent = s.trend === 'UP' ? '▲ ขาขึ้น' : s.trend === 'DOWN' ? '▼ ขาลง' : '--';
+  tEl.style.color = s.trend === 'UP' ? '#00ff88' : s.trend === 'DOWN' ? '#ff4d8b' : '#1a3a1a';
+  document.getElementById('i-sl').textContent    = s.sl ? fmt(s.sl) : '--';
+  document.getElementById('i-tp').textContent    = s.tp ? fmt(s.tp) : '--';
+  document.getElementById('i-cycle').textContent = s.cycle || '--';
+
+  // Position
+  const posEl = document.getElementById('pos-content');
+  const pos = s.open_position || s.position;
+  if (pos) {
+    const isUp = pos.side === 'BUY';
+    const pnl  = isUp ? (price - pos.entry) * pos.quantity
+                      : (pos.entry - price) * pos.quantity;
+    posEl.innerHTML = `
+      <div class="pos-inner ${isUp ? 'buy-p' : 'sell-p'}">
+        <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+          <span style="font-weight:700;color:${isUp?'#00ff88':'#ff4d8b'};font-size:16px">${pos.side}</span>
+          <span class="trade-pnl" style="color:${pnl>=0?'#00ff88':'#ff4d8b'}">${pnl>=0?'+':''}${pnl.toFixed(4)} USDT</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:11px;color:#1a3a1a">
+          <div>เข้า <span style="color:#e0e8ff;font-family:'JetBrains Mono',monospace">${fmt(pos.entry)}</span></div>
+          <div>ปัจจุบัน <span style="color:#ffe600;font-family:'JetBrains Mono',monospace">${fmt(price)}</span></div>
+          <div>SL <span style="color:#ff4d8b;font-family:'JetBrains Mono',monospace">${fmt(pos.sl)}</span></div>
+          <div>TP <span style="color:#00ff88;font-family:'JetBrains Mono',monospace">${fmt(pos.tp)}</span></div>
+        </div>
+      </div>`;
+  } else {
+    posEl.innerHTML = '<div class="pos-inner no-p">ยังไม่มี Position</div>';
+  }
+}
+
+function renderTrades(trades) {
+  const closed = trades.filter(t => t.result === 'TP' || t.result === 'SL');
+  const wins   = closed.filter(t => t.result === 'TP');
+  const losses = closed.filter(t => t.result === 'SL');
+  const totPnl = closed.reduce((s, t) => s + (t.pnl || 0), 0);
+  const wr     = closed.length ? Math.round(wins.length / closed.length * 100) : 0;
+
+  // Stats
+  document.getElementById('s-wr').textContent     = closed.length ? wr + '%' : '--%';
+  document.getElementById('s-wr').style.color     = wr >= 50 ? '#00ff88' : '#ff4d8b';
+  document.getElementById('s-total').textContent  = closed.length;
+  document.getElementById('s-wins').textContent   = wins.length;
+  document.getElementById('s-losses').textContent = losses.length;
+  const pnlEl = document.getElementById('s-pnl');
+  pnlEl.textContent = closed.length ? (totPnl >= 0 ? '+' : '') + totPnl.toFixed(4) : '--';
+  pnlEl.style.color = totPnl >= 0 ? '#00ff88' : '#ff4d8b';
+
+  // Trade list
+  document.getElementById('trade-count').textContent = `${trades.length} trades`;
+  const listEl = document.getElementById('trade-list');
+  if (!trades.length) {
+    listEl.innerHTML = '<div style="text-align:center;padding:16px;color:#1a2a1a;font-size:12px">ยังไม่มีประวัติ</div>';
+    return;
+  }
+  listEl.innerHTML = [...trades].reverse().slice(0, 20).map(t => {
+    const pnl = t.pnl || 0;
+    const res = t.result || 'OPEN';
+    return `
+    <div class="trade-item">
+      <div class="trade-header">
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="side-badge ${t.side.toLowerCase()}">${t.side}</span>
+          <span class="result-badge ${res}">${res}</span>
+          <span style="font-size:10px;color:#1a3a1a">#${t.id}</span>
+        </div>
+        <span class="trade-pnl" style="color:${pnl>=0?'#00ff88':'#ff4d8b'}">${pnl>=0?'+':''}${pnl.toFixed(4)}</span>
+      </div>
+      <div class="trade-detail">
+        <span>เข้า ${fmt(t.entry)}</span>
+        ${t.exit ? `<span>ออก ${fmt(t.exit)}</span>` : ''}
+        ${t.hold_min ? `<span>⏱ ${t.hold_min}m</span>` : ''}
+        <span>Conf ${t.confidence}%</span>
+        <span>RSI ${t.rsi}</span>
+      </div>
+      ${t.entry_time ? `<div style="font-size:9px;color:#1a2a1a;margin-top:3px">${t.entry_time}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+// Auto-refresh ทุก 5 นาที
+fetchAll();
+setInterval(fetchAll, 5 * 60 * 1000);
+</script>
+</body>
+</html>
